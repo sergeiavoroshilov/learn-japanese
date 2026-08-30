@@ -1,3 +1,5 @@
+import type { MicSource } from './audio';
+
 /**
  * Energy-based speech-onset detector.
  *
@@ -19,11 +21,17 @@
  * run without a microphone.
  */
 export interface OnsetSource {
-  start(): Promise<void>;
+  start(mic: MicSource | null): Promise<void>;
   stop(): void;
   /** Arm for a new card; the callback fires once, with ms since arming. */
   arm(onOnset: (msSinceArm: number) => void): void;
   disarm(): void;
+  /**
+   * Fires when speech that had started falls back to silence. The drill uses
+   * it to tell the decoder "the answer is over, commit now" instead of waiting
+   * for the engine's own endpointing.
+   */
+  onSpeechEnd(cb: (speechMs: number) => void): void;
   readonly level: number;
   readonly threshold: number;
 }
@@ -31,6 +39,8 @@ export interface OnsetSource {
 export interface OnsetDetectorOptions {
   /** Frames above threshold required to call it speech. */
   framesToConfirm?: number;
+  /** Silence needed before speech counts as finished. */
+  silenceMs?: number;
   /** Multiple of the measured noise floor that counts as speech. */
   noiseMultiplier?: number;
   /** Absolute RMS floor, so a silent room cannot make the threshold ~0. */
@@ -38,8 +48,6 @@ export interface OnsetDetectorOptions {
 }
 
 export class OnsetDetector implements OnsetSource {
-  private ctx: AudioContext | null = null;
-  private stream: MediaStream | null = null;
   private analyser: AnalyserNode | null = null;
   private buffer: Float32Array<ArrayBuffer> = new Float32Array(0);
   private timer: number | null = null;
@@ -50,31 +58,36 @@ export class OnsetDetector implements OnsetSource {
 
   private armedAt: number | null = null;
   private aboveCount = 0;
+  private belowCount = 0;
+  private speaking = false;
+  /**
+   * Set when a card is armed while the previous answer is still being spoken:
+   * onset then waits for actual silence first, instead of reporting ~0 ms.
+   */
+  private awaitingSilence = false;
   private onOnset: ((msSinceArm: number) => void) | null = null;
+  private speechEndListener: ((speechMs: number) => void) | null = null;
+  private speechStartedAt = 0;
 
   private peak = 0;
 
   private readonly framesToConfirm: number;
   private readonly noiseMultiplier: number;
   private readonly minThreshold: number;
+  private readonly framesForSilence: number;
 
   constructor(opts: OnsetDetectorOptions = {}) {
     this.framesToConfirm = opts.framesToConfirm ?? 3;
     this.noiseMultiplier = opts.noiseMultiplier ?? 3.5;
     this.minThreshold = opts.minThreshold ?? 0.015;
+    // A mora is short; ~160 ms of silence is enough to call it finished
+    // without cutting off a trailing vowel.
+    this.framesForSilence = Math.round((opts.silenceMs ?? 160) / 20);
   }
 
-  /** Requests the mic and starts measuring the room's noise floor. */
-  async start(): Promise<void> {
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
-    this.ctx = new AudioContext();
-    const source = this.ctx.createMediaStreamSource(this.stream);
-    const analyser = this.ctx.createAnalyser();
-    analyser.fftSize = 1024;
-    analyser.smoothingTimeConstant = 0;
-    source.connect(analyser);
+  /** Attaches to an already-open mic and starts measuring the noise floor. */
+  async start(mic: MicSource): Promise<void> {
+    const analyser = mic.createAnalyser();
     this.analyser = analyser;
     this.buffer = new Float32Array(analyser.fftSize);
 
@@ -106,6 +119,12 @@ export class OnsetDetector implements OnsetSource {
     this.armedAt = performance.now();
     this.aboveCount = 0;
     this.onOnset = onOnset;
+    // Still hearing the previous answer — do not call that this card's onset.
+    this.awaitingSilence = this.speaking;
+  }
+
+  onSpeechEnd(cb: (speechMs: number) => void): void {
+    this.speechEndListener = cb;
   }
 
   disarm(): void {
@@ -117,11 +136,8 @@ export class OnsetDetector implements OnsetSource {
     if (this.timer !== null) window.clearInterval(this.timer);
     this.timer = null;
     this.disarm();
+    this.analyser?.disconnect();
     this.analyser = null;
-    this.stream?.getTracks().forEach((t) => t.stop());
-    this.stream = null;
-    void this.ctx?.close();
-    this.ctx = null;
   }
 
   private tick(): void {
@@ -139,20 +155,34 @@ export class OnsetDetector implements OnsetSource {
       return;
     }
 
-    if (this.armedAt === null) return;
-
     if (rms > this.threshold) {
+      this.belowCount = 0;
       this.aboveCount++;
-      if (this.aboveCount >= this.framesToConfirm) {
-        const onset = Math.round(performance.now() - this.armedAt);
-        const cb = this.onOnset;
-        this.disarm();
-        // Subtract the frames it took to confirm, so we report the moment
-        // speech actually crossed the threshold.
-        cb?.(Math.max(0, onset - this.framesToConfirm * 20));
+      if (!this.speaking && this.aboveCount >= this.framesToConfirm) {
+        this.speaking = true;
+        this.speechStartedAt = performance.now() - this.framesToConfirm * 20;
+        if (this.armedAt !== null && !this.awaitingSilence) {
+          const onset = Math.round(performance.now() - this.armedAt);
+          const cb = this.onOnset;
+          this.onOnset = null;
+          this.armedAt = null;
+          // Subtract the frames it took to confirm, so we report the moment
+          // speech actually crossed the threshold.
+          cb?.(Math.max(0, onset - this.framesToConfirm * 20));
+        }
       }
     } else {
       this.aboveCount = 0;
+      this.belowCount++;
+      if (this.belowCount >= this.framesForSilence) {
+        if (this.speaking) {
+          this.speaking = false;
+          const spokenFor = performance.now() - this.speechStartedAt - this.framesForSilence * 20;
+          this.speechEndListener?.(Math.max(0, Math.round(spokenFor)));
+        }
+        // Silence reached: a card armed mid-speech may now measure onset.
+        this.awaitingSilence = false;
+      }
     }
   }
 }

@@ -1,0 +1,296 @@
+{
+  "recognizer": "Vosk (словарь из 46 мор)",
+  "rule": "exact",
+  "grammarSize": 46,
+  "timeoutMs": 6000,
+  "startedAt": "2026-08-30T14:24:21.594Z",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+  "stats": {
+    "total": 20,
+    "matched": 7,
+    "exact": 7,
+    "containsOnly": 0,
+    "timeouts": 13,
+    "skipped": 0,
+    "hitRate": 0.35,
+    "onsetMedian": 935,
+    "matchMedian": 2490,
+    "asrLagMedian": 2048,
+    "asrLagP90": 5536,
+    "cardsWithWrongHypotheses": 12
+  },
+  "cards": [
+    {
+      "glyph": "め",
+      "romaji": "me",
+      "status": "match",
+      "onsetMs": 2053,
+      "matchMs": 4518,
+      "asrLagMs": 2465,
+      "exact": true,
+      "matchedTranscript": "め",
+      "hypotheses": [
+        { "transcript": "ね", "atMs": 2599, "final": false, "matched": false },
+        { "transcript": "ね", "atMs": 3397, "final": true, "matched": false },
+        { "transcript": "め", "atMs": 4518, "final": false, "matched": true }
+      ]
+    },
+    {
+      "glyph": "の",
+      "romaji": "no",
+      "status": "timeout",
+      "onsetMs": 1048,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "く",
+      "romaji": "ku",
+      "status": "timeout",
+      "onsetMs": 1,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": [
+        { "transcript": "の", "atMs": 348, "final": false, "matched": false },
+        { "transcript": "の", "atMs": 1117, "final": true, "matched": false },
+        { "transcript": "こ", "atMs": 1227, "final": false, "matched": false },
+        { "transcript": "こ", "atMs": 2018, "final": true, "matched": false }
+      ]
+    },
+    {
+      "glyph": "ゆ",
+      "romaji": "yu",
+      "status": "timeout",
+      "onsetMs": 935,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": [
+        { "transcript": "よ", "atMs": 1552, "final": false, "matched": false },
+        { "transcript": "よ", "atMs": 2314, "final": true, "matched": false },
+        { "transcript": "[unk]", "atMs": 3476, "final": false, "matched": false },
+        { "transcript": "[unk] よ", "atMs": 5154, "final": false, "matched": false }
+      ]
+    },
+    {
+      "glyph": "に",
+      "romaji": "ni",
+      "status": "timeout",
+      "onsetMs": 0,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": [
+        { "transcript": "よ", "atMs": 298, "final": false, "matched": false },
+        { "transcript": "よ", "atMs": 1096, "final": true, "matched": false },
+        { "transcript": "た", "atMs": 2219, "final": false, "matched": false },
+        { "transcript": "た", "atMs": 3014, "final": true, "matched": false },
+        { "transcript": "け", "atMs": 4671, "final": false, "matched": false },
+        { "transcript": "け", "atMs": 5441, "final": true, "matched": false }
+      ]
+    },
+    {
+      "glyph": "し",
+      "romaji": "shi",
+      "status": "match",
+      "onsetMs": 268,
+      "matchMs": 1387,
+      "asrLagMs": 1119,
+      "exact": true,
+      "matchedTranscript": "し",
+      "hypotheses": [
+        { "transcript": "し", "atMs": 1387, "final": false, "matched": true }
+      ]
+    },
+    {
+      "glyph": "な",
+      "romaji": "na",
+      "status": "timeout",
+      "onsetMs": 1362,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "も",
+      "romaji": "mo",
+      "status": "match",
+      "onsetMs": 758,
+      "matchMs": 1237,
+      "asrLagMs": 479,
+      "exact": true,
+      "matchedTranscript": "も",
+      "hypotheses": [
+        { "transcript": "な", "atMs": 216, "final": false, "matched": false },
+        { "transcript": "な", "atMs": 989, "final": true, "matched": false },
+        { "transcript": "も", "atMs": 1237, "final": false, "matched": true }
+      ]
+    },
+    {
+      "glyph": "る",
+      "romaji": "ru",
+      "status": "timeout",
+      "onsetMs": 1156,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "つ",
+      "romaji": "tsu",
+      "status": "match",
+      "onsetMs": 1476,
+      "matchMs": 3524,
+      "asrLagMs": 2048,
+      "exact": true,
+      "matchedTranscript": "つ",
+      "hypotheses": [
+        { "transcript": "[unk]", "atMs": 2137, "final": false, "matched": false },
+        { "transcript": "つ", "atMs": 3524, "final": false, "matched": true }
+      ]
+    },
+    {
+      "glyph": "う",
+      "romaji": "u",
+      "status": "timeout",
+      "onsetMs": 1552,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "い",
+      "romaji": "i",
+      "status": "timeout",
+      "onsetMs": 0,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": [
+        { "transcript": "[unk]", "atMs": 1762, "final": false, "matched": false },
+        { "transcript": "[unk] [unk]", "atMs": 4446, "final": true, "matched": false }
+      ]
+    },
+    {
+      "glyph": "ふ",
+      "romaji": "fu",
+      "status": "timeout",
+      "onsetMs": 274,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": [
+        { "transcript": "[unk]", "atMs": 3208, "final": true, "matched": false }
+      ]
+    },
+    {
+      "glyph": "ひ",
+      "romaji": "hi",
+      "status": "match",
+      "onsetMs": 332,
+      "matchMs": 2490,
+      "asrLagMs": 2158,
+      "exact": true,
+      "matchedTranscript": "ひ",
+      "hypotheses": [
+        { "transcript": "ひ", "atMs": 2490, "final": false, "matched": true }
+      ]
+    },
+    {
+      "glyph": "ん",
+      "romaji": "n",
+      "status": "timeout",
+      "onsetMs": 882,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "す",
+      "romaji": "su",
+      "status": "match",
+      "onsetMs": 59,
+      "matchMs": 5595,
+      "asrLagMs": 5536,
+      "exact": true,
+      "matchedTranscript": "す",
+      "hypotheses": [
+        { "transcript": "そ", "atMs": 1755, "final": false, "matched": false },
+        { "transcript": "そ", "atMs": 2519, "final": true, "matched": false },
+        { "transcript": "す", "atMs": 5595, "final": false, "matched": true }
+      ]
+    },
+    {
+      "glyph": "そ",
+      "romaji": "so",
+      "status": "timeout",
+      "onsetMs": 1097,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": [
+        { "transcript": "unk]", "atMs": 13, "final": false, "matched": false },
+        { "transcript": "unk] そ", "atMs": 2211, "final": true, "matched": true }
+      ]
+    },
+    {
+      "glyph": "て",
+      "romaji": "te",
+      "status": "timeout",
+      "onsetMs": 1675,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "わ",
+      "romaji": "wa",
+      "status": "timeout",
+      "onsetMs": 1251,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": [
+        { "transcript": "[unk]", "atMs": 2170, "final": false, "matched": false },
+        { "transcript": "[unk] [unk]", "atMs": 3821, "final": false, "matched": false },
+        { "transcript": "[unk] [unk]", "atMs": 4849, "final": true, "matched": false }
+      ]
+    },
+    {
+      "glyph": "ね",
+      "romaji": "ne",
+      "status": "match",
+      "onsetMs": 1079,
+      "matchMs": 1428,
+      "asrLagMs": 349,
+      "exact": true,
+      "matchedTranscript": "ね",
+      "hypotheses": [
+        { "transcript": "わ", "atMs": 38, "final": false, "matched": false },
+        { "transcript": "わ", "atMs": 299, "final": true, "matched": false },
+        { "transcript": "ね", "atMs": 1428, "final": false, "matched": true }
+      ]
+    }
+  ]
+}

@@ -31,7 +31,7 @@ export class KeyboardSource implements DrillRecognizer, OnsetSource {
     private readonly rule: MatchRule,
   ) {}
 
-  async start(): Promise<void> {
+  async start(_mic?: unknown): Promise<void> {
     window.addEventListener('keydown', this.listener);
     this.events.onListening(true);
   }
@@ -51,6 +51,9 @@ export class KeyboardSource implements DrillRecognizer, OnsetSource {
     this.expected = null;
     this.onOnset = null;
   }
+
+  /** Typing has no engine lag, so there is nothing to commit early. */
+  onSpeechEnd(_cb: (speechMs: number) => void): void {}
 
   stop(): void {
     window.removeEventListener('keydown', this.listener);

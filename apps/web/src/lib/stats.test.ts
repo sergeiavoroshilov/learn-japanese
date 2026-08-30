@@ -10,11 +10,15 @@ function outcome(over: Partial<CardOutcome>): CardOutcome {
     index: 0,
     card,
     onsetMs: 500,
+    speechMs: 300,
     matchMs: 800,
     asrLagMs: 300,
     status: 'match',
     matchedTranscript: card.glyph,
     exact: true,
+    matchedBy: 'card',
+    lateMs: null,
+    witnessHeard: [],
     hypotheses: [],
     ...over,
   };
@@ -49,6 +53,17 @@ describe('summarize', () => {
     expect(stats.timeouts).toBe(1);
     expect(stats.skipped).toBe(1);
     expect(stats.hitRate).toBe(0.5);
+  });
+
+  test('counts which decoder accepted the answer', () => {
+    const stats = summarize([
+      outcome({}),
+      outcome({ matchedBy: 'deck' }),
+      outcome({ matchedBy: 'deck' }),
+      outcome({ status: 'timeout', matchedBy: null, exact: null }),
+    ]);
+    expect(stats.matched).toBe(3);
+    expect(stats.matchedByDeck).toBe(2);
   });
 
   test('latency medians ignore cards without a measurement', () => {
@@ -92,5 +107,20 @@ describe('summarize', () => {
 
   test('no cards yields a zero hit rate rather than NaN', () => {
     expect(summarize([]).hitRate).toBe(0);
+    expect(summarize([]).eventualHitRate).toBe(0);
+  });
+
+  test('late answers count towards the eventual hit rate, not the timely one', () => {
+    const stats = summarize([
+      outcome({}),
+      outcome({ status: 'late', matchMs: null, asrLagMs: null, lateMs: 2400 }),
+      outcome({ status: 'timeout', matchMs: null, asrLagMs: null, exact: null }),
+      outcome({ status: 'late', matchMs: null, asrLagMs: null, lateMs: 1800 }),
+    ]);
+    expect(stats.matched).toBe(1);
+    expect(stats.late).toBe(2);
+    expect(stats.hitRate).toBe(0.25);
+    expect(stats.eventualHitRate).toBe(0.75);
+    expect(stats.lateMedian).toBe(1800);
   });
 });

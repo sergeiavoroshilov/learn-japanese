@@ -1,8 +1,14 @@
+import type { MicSource } from './audio';
 import { judge, type Expected, type MatchVerdict } from './match';
 
 export interface Hypothesis {
   /** Raw text as the engine returned it. */
   transcript: string;
+  /**
+   * Which decoder said it: the per-card one, or the deck-wide control running
+   * alongside. Kept so the two can be counted separately after the fact.
+   */
+  source?: 'card' | 'deck';
   /** ms since the card was shown. */
   atMs: number;
   final: boolean;
@@ -14,6 +20,18 @@ export interface RecognizerEvents {
   onHypothesis(h: Hypothesis): void;
   /** First hypothesis that satisfies the current match rule. */
   onMatch(h: Hypothesis): void;
+  /**
+   * The answer to the PREVIOUS card, arriving after it had already been given
+   * up on. Recorded against that card instead of counting as a miss here —
+   * otherwise a slow engine looks like an inaccurate one.
+   */
+  onLateMatch(h: Hypothesis): void;
+  /**
+   * A parallel decoder that decides nothing and only reports what it heard.
+   * In per-card grammar mode it is the check on false accepts: a decoder that
+   * knows a single word can force any sound into it.
+   */
+  onWitness?(transcript: string): void;
   onError(error: string): void;
   /** Engine started/stopped listening (Chrome restarts on its own). */
   onListening(listening: boolean): void;
@@ -25,11 +43,18 @@ export interface RecognizerEvents {
  */
 export interface DrillRecognizer {
   readonly name: string;
-  start(): Promise<void>;
+  /** @param mic shared capture; null when the engine needs no audio (mock). */
+  start(mic: MicSource | null): Promise<void>;
   /** Arm for a new card; resets the "already matched" latch. */
   expect(expected: Expected, shownAt: number): void;
   /** Stop matching without tearing the engine down (between cards). */
   disarm(): void;
+  /**
+   * Ask the engine to commit what it has right now. The drill calls this when
+   * its own VAD hears the answer end, rather than waiting for the engine's
+   * endpointing, which is tuned for sentences.
+   */
+  flush?(): void;
   stop(): void;
 }
 
@@ -65,7 +90,7 @@ export class WebSpeechRecognizer implements DrillRecognizer {
     private readonly lang = 'ja-JP',
   ) {}
 
-  async start(): Promise<void> {
+  async start(_mic: MicSource | null): Promise<void> {
     const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!Ctor) throw new Error('Web Speech API недоступен в этом браузере');
 
