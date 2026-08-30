@@ -129,6 +129,10 @@ export interface RunReport {
       atMs: number;
       final: boolean;
       matched: boolean;
+      /** Kaldi's confidence, when the result carried one. */
+      conf: number | null;
+      /** How much audio the decoder based this on — compare with speechMs. */
+      spanMs: number | null;
     }[];
   }[];
 }
@@ -168,6 +172,8 @@ export function buildReport(
         atMs: h.atMs,
         final: h.final,
         matched: h.verdict.contains,
+        conf: h.conf ?? null,
+        spanMs: h.spanMs ?? null,
       })),
     })),
   };

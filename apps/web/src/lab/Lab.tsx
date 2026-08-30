@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DECKS, VOICE_OOV_KANA, drawFrom, type DeckId, type KanaCard } from '../lib/kana';
 import { KanaGrid } from './KanaGrid';
-import { normalize } from '../lib/match';
+import { grammarFor, normalize } from '../lib/match';
 import { isWebSpeechSupported, type MatchRule } from '../lib/recognizer';
 import { DrillSession, type Engine, type SessionSnapshot } from '../lib/session';
 import { buildReport, summarize } from '../lib/stats';
@@ -52,6 +52,7 @@ export function Lab() {
   const [acceptFromWitness, setAcceptFromWitness] = useState(true);
   const [interCardMs, setInterCardMs] = useState(220);
   const [flushDelayMs, setFlushDelayMs] = useState(250);
+  const [longForms, setLongForms] = useState(true);
 
   const [snapshot, setSnapshot] = useState<SessionSnapshot>(IDLE);
   const [micLevel, setMicLevel] = useState(0);
@@ -83,9 +84,12 @@ export function Lab() {
   const vocabulary = useMemo(
     () =>
       grammarActive
-        ? pool.map((c) => c.kana).filter((kana) => !VOICE_OOV_KANA.includes(kana))
+        ? grammarFor(
+            pool.filter((c) => !VOICE_OOV_KANA.includes(c.kana)),
+            longForms,
+          )
         : null,
-    [grammarActive, pool],
+    [grammarActive, pool, longForms],
   );
 
   const start = useCallback(() => {
@@ -107,6 +111,7 @@ export function Lab() {
       flushOnSilence,
       flushDelayMs,
       interCardMs,
+      longForms,
       onUpdate: setSnapshot,
     });
     sessionRef.current = session;
@@ -126,6 +131,7 @@ export function Lab() {
     acceptFromWitness,
     flushDelayMs,
     interCardMs,
+    longForms,
   ]);
 
   const stop = useCallback(() => sessionRef.current?.stop(), []);
@@ -385,6 +391,17 @@ export function Lab() {
               <span>Показывать ромадзи</span>
             </label>
 
+            {activeEngine === 'vosk' && (
+              <label className="field checkbox">
+                <input
+                  type="checkbox"
+                  checked={longForms}
+                  onChange={(e) => setLongForms(e.target.checked)}
+                />
+                <span>Принимать долгие формы (ああ, あー)</span>
+              </label>
+            )}
+
             {activeEngine !== 'mock' && (
               <label className="field checkbox">
                 <input
@@ -542,6 +559,7 @@ export function Lab() {
                 <th>Ответ</th>
                 <th>Статус</th>
                 <th>Начало</th>
+                <th>Речь</th>
                 <th>Движок</th>
                 <th>Итого</th>
                 <th>Что услышал движок</th>
@@ -559,13 +577,19 @@ export function Lab() {
                     {o.matchedBy === 'deck' ? ' · контрольным' : ''}
                   </td>
                   <td>{ms(o.onsetMs)}</td>
+                  <td>{ms(o.speechMs)}</td>
                   <td>{ms(o.asrLagMs)}</td>
                   <td>{ms(o.matchMs ?? o.lateMs)}</td>
                   <td className="cell-hyps">
                     {o.hypotheses.length === 0
                       ? '—'
                       : o.hypotheses
-                          .map((h) => `${h.transcript}${h.final ? '*' : ''} @${h.atMs}`)
+                          .map(
+                            (h) =>
+                              `${h.transcript}${h.final ? '*' : ''} @${h.atMs}` +
+                              (h.conf !== undefined ? ` conf ${h.conf}` : '') +
+                              (h.spanMs !== undefined ? ` ${h.spanMs}мс` : ''),
+                          )
                           .join(' · ')}
                     {o.witnessHeard.length > 0 && (
                       <span className="witness"> контроль: {o.witnessHeard.join(' ')}</span>

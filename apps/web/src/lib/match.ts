@@ -1,17 +1,38 @@
 import { toHiragana } from 'wanakana';
 import type { KanaCard } from './kana';
+import { LEXICON_FORMS } from './lexicon';
 
 export interface Expected {
   cardId: string;
   /** Accepted readings, any script — normalised before comparison. */
   accept: string[];
+  /**
+   * The spellings a grammar-restricted decoder may be given for this card.
+   * Only words the model's lexicon actually has, and all of them the same
+   * reading — あ, ア, あー, ああ are one mora, not four.
+   */
+  lexical: string[];
 }
 
-export function expectedFor(card: KanaCard): Expected {
+export function expectedFor(card: KanaCard, longForms = true): Expected {
+  const forms = LEXICON_FORMS[card.kana] ?? [card.kana];
+  // The bare mora is always first: it is what a decoder restricted to a single
+  // word is given when the long variants are switched off.
+  const lexical = longForms ? forms : forms.slice(0, 1);
   return {
     cardId: card.id,
-    accept: [card.kana, card.romaji, ...(card.alt ?? [])],
+    accept: [...lexical, card.romaji, ...(card.alt ?? [])],
+    lexical,
   };
+}
+
+/** Flattened, de-duplicated grammar for a whole deck. */
+export function grammarFor(cards: KanaCard[], longForms = true): string[] {
+  const out = new Set<string>();
+  for (const card of cards) {
+    for (const form of expectedFor(card, longForms).lexical) out.add(form);
+  }
+  return [...out];
 }
 
 const NOISE = /[\s　。、．，,.!?！？・…「」『』ー～]/g;

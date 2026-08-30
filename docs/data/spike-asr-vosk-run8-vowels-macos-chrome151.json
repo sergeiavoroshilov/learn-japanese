@@ -1,0 +1,93 @@
+{
+  "recognizer": "Vosk (словарь из одной ожидаемой моры)",
+  "rule": "exact",
+  "grammarMode": "card",
+  "flushDelayMs": 250,
+  "grammarSize": 1,
+  "timeoutMs": 6000,
+  "startedAt": "2026-08-30T16:07:13.122Z",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+  "note": "Только строка あ行, отобрана таблицей годзюон. Базовый замер до долгих форм: あ 4/4, お 4/4, え 2/4, い 0/4 вовремя, う 0/4. Разбор — SPIKE-ASR-VOSK.md, «Прогон 8».",
+  "stats": {
+    "total": 20, "matched": 10, "exact": 10, "containsOnly": 0, "matchedByDeck": 0,
+    "late": 2, "timeouts": 8, "skipped": 0, "hitRate": 0.5, "eventualHitRate": 0.6,
+    "lateMedian": 6532, "onsetMedian": 1016, "matchMedian": 1617,
+    "asrLagMedian": 355, "asrLagP90": 451,
+    "cardsWithWrongHypotheses": 2, "notPlaced": 6, "engineSilent": 0, "acceptedAfterRepeat": 1
+  },
+  "cards": [
+    { "glyph": "お", "romaji": "o", "status": "match", "onsetMs": 1282, "speechMs": 221, "matchMs": 1637, "asrLagMs": 355, "exact": true, "matchedBy": "card", "lateMs": null, "matchedTranscript": "お", "witnessHeard": [],
+      "hypotheses": [{ "transcript": "お", "source": "card", "atMs": 1637, "final": false, "matched": true }] },
+    { "glyph": "う", "romaji": "u", "status": "timeout", "onsetMs": 961, "speechMs": 420, "matchMs": null, "asrLagMs": null, "exact": null, "matchedBy": null, "lateMs": null, "matchedTranscript": null, "witnessHeard": ["お"],
+      "hypotheses": [
+        { "transcript": "[unk]", "source": "card", "atMs": 1276, "final": false, "matched": false },
+        { "transcript": "[unk]", "source": "card", "atMs": 1633, "final": true, "matched": false }] },
+    { "glyph": "い", "romaji": "i", "status": "timeout", "onsetMs": 1075, "speechMs": 260, "matchMs": null, "asrLagMs": null, "exact": null, "matchedBy": null, "lateMs": null, "matchedTranscript": null, "witnessHeard": ["[unk]", "[unk]", "[unk]"],
+      "hypotheses": [
+        { "transcript": "[unk]", "source": "card", "atMs": 1425, "final": false, "matched": false },
+        { "transcript": "[unk]", "source": "card", "atMs": 1812, "final": true, "matched": false },
+        { "transcript": "[unk]", "source": "deck", "atMs": 1844, "final": true, "matched": false }] },
+    { "glyph": "あ", "romaji": "a", "status": "match", "onsetMs": 1135, "speechMs": 259, "matchMs": 1433, "asrLagMs": 298, "exact": true, "matchedBy": "card", "lateMs": null, "matchedTranscript": "あ", "witnessHeard": [],
+      "hypotheses": [{ "transcript": "あ", "source": "card", "atMs": 1433, "final": false, "matched": true }] },
+    { "glyph": "え", "romaji": "e", "status": "match", "onsetMs": 1140, "speechMs": 240, "matchMs": 1591, "asrLagMs": 451, "exact": true, "matchedBy": "card", "lateMs": null, "matchedTranscript": "え", "witnessHeard": [],
+      "hypotheses": [{ "transcript": "え", "source": "card", "atMs": 1591, "final": false, "matched": true }] },
+    { "glyph": "う", "romaji": "u", "status": "timeout", "onsetMs": 1039, "speechMs": 222, "matchMs": null, "asrLagMs": null, "exact": null, "matchedBy": null, "lateMs": null, "matchedTranscript": null, "witnessHeard": ["お", "お", "お", "お"],
+      "hypotheses": [
+        { "transcript": "[unk]", "source": "card", "atMs": 1406, "final": false, "matched": false },
+        { "transcript": "[unk]", "source": "card", "atMs": 1762, "final": true, "matched": false },
+        { "transcript": "お", "source": "deck", "atMs": 1824, "final": true, "matched": false }] },
+    { "glyph": "お", "romaji": "o", "status": "match", "onsetMs": 1755, "speechMs": 180, "matchMs": 2143, "asrLagMs": 388, "exact": true, "matchedBy": "card", "lateMs": null, "matchedTranscript": "お", "witnessHeard": [],
+      "hypotheses": [{ "transcript": "お", "source": "card", "atMs": 2143, "final": false, "matched": true }] },
+    { "glyph": "あ", "romaji": "a", "status": "match", "onsetMs": 2028, "speechMs": 182, "matchMs": 2357, "asrLagMs": 329, "exact": true, "matchedBy": "card", "lateMs": null, "matchedTranscript": "あ", "witnessHeard": [],
+      "hypotheses": [{ "transcript": "あ", "source": "card", "atMs": 2357, "final": false, "matched": true }] },
+    { "glyph": "え", "romaji": "e", "status": "match", "onsetMs": 911, "speechMs": 200, "matchMs": 5677, "asrLagMs": 4766, "exact": true, "matchedBy": "card", "lateMs": null, "matchedTranscript": "え", "witnessHeard": [],
+      "hypotheses": [
+        { "transcript": "[unk]", "source": "card", "atMs": 4127, "final": false, "matched": false },
+        { "transcript": "[unk]", "source": "card", "atMs": 4192, "final": true, "matched": false },
+        { "transcript": "え", "source": "card", "atMs": 5677, "final": true, "matched": true }] },
+    { "glyph": "い", "romaji": "i", "status": "late", "onsetMs": 849, "speechMs": 240, "matchMs": null, "asrLagMs": null, "exact": true, "matchedBy": null, "lateMs": 6645, "matchedTranscript": "[unk] [unk] い", "witnessHeard": ["[unk]"],
+      "hypotheses": [
+        { "transcript": "[unk]", "source": "card", "atMs": 1179, "final": false, "matched": false },
+        { "transcript": "[unk]", "source": "card", "atMs": 1545, "final": true, "matched": false },
+        { "transcript": "[unk]", "source": "deck", "atMs": 4828, "final": true, "matched": false }] },
+    { "glyph": "お", "romaji": "o", "status": "match", "onsetMs": 1357, "speechMs": 201, "matchMs": 1617, "asrLagMs": 260, "exact": true, "matchedBy": "card", "lateMs": null, "matchedTranscript": "お", "witnessHeard": [],
+      "hypotheses": [{ "transcript": "お", "source": "card", "atMs": 1617, "final": false, "matched": true }] },
+    { "glyph": "う", "romaji": "u", "status": "timeout", "onsetMs": 919, "speechMs": 239, "matchMs": null, "asrLagMs": null, "exact": null, "matchedBy": null, "lateMs": null, "matchedTranscript": null, "witnessHeard": ["お", "お", "お"],
+      "hypotheses": [
+        { "transcript": "[unk]", "source": "card", "atMs": 1328, "final": false, "matched": false },
+        { "transcript": "[unk]", "source": "card", "atMs": 1658, "final": true, "matched": false }] },
+    { "glyph": "え", "romaji": "e", "status": "timeout", "onsetMs": 761, "speechMs": 200, "matchMs": null, "asrLagMs": null, "exact": null, "matchedBy": null, "lateMs": null, "matchedTranscript": null, "witnessHeard": ["[unk]"],
+      "hypotheses": [
+        { "transcript": "[unk]", "source": "card", "atMs": 2525, "final": true, "matched": false },
+        { "transcript": "[unk]", "source": "deck", "atMs": 2585, "final": true, "matched": false },
+        { "transcript": "[unk]", "source": "card", "atMs": 5259, "final": false, "matched": false }] },
+    { "glyph": "い", "romaji": "i", "status": "late", "onsetMs": 1016, "speechMs": 221, "matchMs": null, "asrLagMs": null, "exact": true, "matchedBy": null, "lateMs": 6532, "matchedTranscript": "い", "witnessHeard": ["[unk]", "[unk]"],
+      "hypotheses": [
+        { "transcript": "[unk]", "source": "card", "atMs": 1426, "final": false, "matched": false },
+        { "transcript": "[unk]", "source": "card", "atMs": 1695, "final": true, "matched": false },
+        { "transcript": "[unk]", "source": "deck", "atMs": 1755, "final": true, "matched": false }] },
+    { "glyph": "あ", "romaji": "a", "status": "match", "onsetMs": 2175, "speechMs": 219, "matchMs": 2613, "asrLagMs": 438, "exact": true, "matchedBy": "card", "lateMs": null, "matchedTranscript": "あ", "witnessHeard": [],
+      "hypotheses": [{ "transcript": "あ", "source": "card", "atMs": 2613, "final": false, "matched": true }] },
+    { "glyph": "い", "romaji": "i", "status": "timeout", "onsetMs": 942, "speechMs": 221, "matchMs": null, "asrLagMs": null, "exact": null, "matchedBy": null, "lateMs": null, "matchedTranscript": null, "witnessHeard": ["[unk]"],
+      "hypotheses": [
+        { "transcript": "[unk]", "source": "card", "atMs": 1655, "final": true, "matched": false },
+        { "transcript": "[unk]", "source": "card", "atMs": 2729, "final": false, "matched": false },
+        { "transcript": "[unk]", "source": "deck", "atMs": 5430, "final": true, "matched": false }] },
+    { "glyph": "お", "romaji": "o", "status": "match", "onsetMs": 1056, "speechMs": 201, "matchMs": 1415, "asrLagMs": 359, "exact": true, "matchedBy": "card", "lateMs": null, "matchedTranscript": "お", "witnessHeard": [],
+      "hypotheses": [{ "transcript": "お", "source": "card", "atMs": 1415, "final": false, "matched": true }] },
+    { "glyph": "あ", "romaji": "a", "status": "match", "onsetMs": 859, "speechMs": 200, "matchMs": 1187, "asrLagMs": 328, "exact": true, "matchedBy": "card", "lateMs": null, "matchedTranscript": "あ", "witnessHeard": [],
+      "hypotheses": [{ "transcript": "あ", "source": "card", "atMs": 1187, "final": false, "matched": true }] },
+    { "glyph": "う", "romaji": "u", "status": "timeout", "onsetMs": 930, "speechMs": 261, "matchMs": null, "asrLagMs": null, "exact": null, "matchedBy": null, "lateMs": null, "matchedTranscript": null, "witnessHeard": ["お", "お", "お", "お"],
+      "hypotheses": [
+        { "transcript": "[unk]", "source": "card", "atMs": 1246, "final": false, "matched": false },
+        { "transcript": "[unk]", "source": "card", "atMs": 1604, "final": true, "matched": false },
+        { "transcript": "お", "source": "deck", "atMs": 1664, "final": true, "matched": false }] },
+    { "glyph": "え", "romaji": "e", "status": "timeout", "onsetMs": 778, "speechMs": 200, "matchMs": null, "asrLagMs": null, "exact": null, "matchedBy": null, "lateMs": null, "matchedTranscript": null, "witnessHeard": ["[unk]"],
+      "hypotheses": [
+        { "transcript": "[unk] [unk]", "source": "card", "atMs": 453, "final": false, "matched": false },
+        { "transcript": "[unk] [unk]", "source": "card", "atMs": 638, "final": true, "matched": false },
+        { "transcript": "[unk]", "source": "card", "atMs": 1114, "final": false, "matched": false },
+        { "transcript": "[unk]", "source": "card", "atMs": 1483, "final": true, "matched": false },
+        { "transcript": "[unk]", "source": "deck", "atMs": 5843, "final": true, "matched": false }] }
+  ]
+}

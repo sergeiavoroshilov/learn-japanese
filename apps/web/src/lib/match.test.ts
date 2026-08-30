@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { ALL_CARDS } from './kana';
-import { expectedFor, judge, normalize } from './match';
+import { expectedFor, grammarFor, judge, normalize } from './match';
 
 const card = (glyph: string) => {
   const found = ALL_CARDS.find((c) => c.glyph === glyph);
@@ -89,5 +89,48 @@ describe('judge', () => {
   test('youon is not satisfied by its first kana alone', () => {
     const v = judge('き', expectedFor(card('きゃ')));
     expect(v.contains).toBe(false);
+  });
+});
+
+describe('lexicon forms', () => {
+  test('a card accepts every spelling of its own mora the model knows', () => {
+    const expected = expectedFor(card('い'));
+    // All the same reading: held long, «い» is honestly transcribed «いい».
+    expect(expected.lexical).toContain('い');
+    expect(expected.lexical).toContain('いい');
+    expect(expected.lexical).toContain('いー');
+    expect(expected.lexical).toContain('イ');
+  });
+
+  test('the long forms judge as the same answer', () => {
+    for (const said of ['い', 'イ', 'いー', 'イー', 'いい', 'イイ']) {
+      expect(judge(said, expectedFor(card('い'))).exact).toBe(true);
+    }
+  });
+
+  test('they do not make a different mora acceptable', () => {
+    for (const said of ['え', 'ええ', 'えー', 'お', 'おお']) {
+      expect(judge(said, expectedFor(card('い'))).contains).toBe(false);
+    }
+  });
+
+  test('the bare mora comes first, so switching long forms off still works', () => {
+    const short = expectedFor(card('い'), false);
+    expect(short.lexical).toEqual(['い']);
+    expect(judge('い', short).exact).toBe(true);
+    expect(judge('いい', short).exact).toBe(false);
+  });
+
+  test('a deck grammar is the union of its cards, de-duplicated', () => {
+    const grammar = grammarFor([card('あ'), card('い')]);
+    expect(grammar).toContain('ああ');
+    expect(grammar).toContain('いい');
+    expect(new Set(grammar).size).toBe(grammar.length);
+  });
+
+  test('moras the lexicon has only one form for still work', () => {
+    // ぢ and づ have no long variants in this model; they must not break.
+    expect(expectedFor(card('ぢ')).lexical).toEqual(['ぢ']);
+    expect(judge('ぢ', expectedFor(card('ぢ'))).exact).toBe(true);
   });
 });

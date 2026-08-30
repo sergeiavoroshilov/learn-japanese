@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cardsOf, type KanaCard } from '../lib/kana';
 import { classify, factsFrom } from '../lib/grade';
+import { grammarFor } from '../lib/match';
 import { planSession, type SessionPlan } from '../lib/plan';
 import { DrillSession, type Engine, type SessionSnapshot } from '../lib/session';
 import { applyAnswer, isNew, type AnswerQuality, type CardProgress } from '../lib/srs';
@@ -107,7 +108,7 @@ export function Trainer() {
       // The deck-wide decoder runs alongside and never decides anything on its
       // own; its job is to name the mora the learner actually said, which is
       // what separates a misreading from a sound the decoder could not place.
-      deckVocabulary: pool.filter((c) => !c.voiceOov).map((c) => c.kana),
+      deckVocabulary: grammarFor(pool.filter((c) => !c.voiceOov)),
       witness: true,
       acceptFromWitness: true,
       flushOnSilence: true,

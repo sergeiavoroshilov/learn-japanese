@@ -13,6 +13,17 @@ export interface Hypothesis {
   atMs: number;
   final: boolean;
   verdict: MatchVerdict;
+  /**
+   * What the decoder reported about the audio it actually consumed, when it
+   * says so (final results only). `conf` is Kaldi's confidence; `spanMs` is
+   * how much audio the hypothesis covers.
+   *
+   * The span is the diagnostic that matters: compared against the VAD's own
+   * measurement of the answer, it separates «the decoder heard the whole
+   * sound and rejected it» from «the decoder only got a fragment».
+   */
+  conf?: number;
+  spanMs?: number;
 }
 
 export interface RecognizerEvents {

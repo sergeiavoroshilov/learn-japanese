@@ -11,7 +11,8 @@
     "build": "bun --filter web build",
     "typecheck": "bun --filter web typecheck",
     "test": "bun test",
-    "fetch:model": "./scripts/fetch-vosk-model.sh"
+    "fetch:model": "./scripts/fetch-vosk-model.sh",
+    "lexicon": "./scripts/lexicon-forms.sh"
   },
   "devDependencies": {
     "@types/bun": "^1.4.0"

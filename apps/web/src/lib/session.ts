@@ -97,6 +97,12 @@ export interface SessionOptions {
   flushDelayMs?: number;
   /** How tightly the Vosk decoder is constrained. */
   grammarMode?: GrammarMode;
+  /**
+   * Let the decoder answer with the long forms of the mora (ああ, あー) as
+   * well as the bare one. Off is the old behaviour, kept so the two can be
+   * compared on the same voice.
+   */
+  longForms?: boolean;
   /** Every mora of this session, for deck-wide grammar. */
   deckVocabulary?: string[];
   /** Log a deck-wide decoder's opinion alongside per-card grammar. */
@@ -285,7 +291,7 @@ export class DrillSession {
       this.liveOnsetMs = onsetMs;
       this.emit();
     });
-    this.recognizer.expect(expectedFor(card), this.shownAt);
+    this.recognizer.expect(expectedFor(card, this.opts.longForms !== false), this.shownAt);
 
     this.timeoutTimer = window.setTimeout(() => this.finishCard('timeout', null), this.opts.timeoutMs);
     this.emit();

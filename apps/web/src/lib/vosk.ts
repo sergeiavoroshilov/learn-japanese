@@ -22,6 +22,28 @@ export const VOSK_MODEL_URL = '/models/vosk-model-small-ja-0.22.tar.gz';
  */
 export { VOICE_OOV_KANA as VOSK_OOV_KANA } from './kana';
 
+interface HypothesisDetail {
+  conf?: number;
+  spanMs?: number;
+}
+
+/**
+ * Confidence and audio span of a final result. Vosk reports one entry per
+ * word with `conf`, `start` and `end` in seconds; the span is taken across
+ * every word, and the confidence is the weakest of them — a hypothesis is
+ * only as good as its shakiest piece.
+ */
+function detail(result: { result?: { conf: number; start: number; end: number }[] }): HypothesisDetail {
+  const words = result.result;
+  if (!words || words.length === 0) return {};
+  const start = Math.min(...words.map((w) => w.start));
+  const end = Math.max(...words.map((w) => w.end));
+  return {
+    conf: Math.round(Math.min(...words.map((w) => w.conf)) * 1000) / 1000,
+    spanMs: Math.round((end - start) * 1000),
+  };
+}
+
 /** How long after a card appears a bare «[unk]» is still the previous card's tail. */
 const TAIL_WINDOW_MS = 300;
 
@@ -133,12 +155,15 @@ export class VoskRecognizer implements DrillRecognizer {
     const mic = this.mic;
     if (!model || !mic) return null;
     const recognizer = new model.KaldiRecognizer(mic.sampleRate, JSON.stringify([...words, '[unk]']));
+    // Per-word confidences and timings: the only way to tell a decoder that
+    // heard the whole sound and refused it from one that got a fragment.
+    recognizer.setWords(true);
     recognizer.on('result', (message) => {
       if (!('result' in message) || !('text' in message.result)) return;
       const text = message.result.text.trim();
       if (!text) return;
       this.events.onWitness?.(text);
-      if (this.opts.acceptFromWitness) this.handle(text, true, 'deck');
+      if (this.opts.acceptFromWitness) this.handle(text, true, 'deck', detail(message.result));
     });
     return recognizer;
   }
@@ -153,6 +178,7 @@ export class VoskRecognizer implements DrillRecognizer {
     // mora, instead of forcing a wrong one.
     const grammar = words ? JSON.stringify([...words, '[unk]']) : undefined;
     const recognizer = new model.KaldiRecognizer(mic.sampleRate, grammar);
+    recognizer.setWords(true);
 
     recognizer.on('partialresult', (message) => {
       if ('result' in message && 'partial' in message.result) {
@@ -161,7 +187,7 @@ export class VoskRecognizer implements DrillRecognizer {
     });
     recognizer.on('result', (message) => {
       if ('result' in message && 'text' in message.result) {
-        this.handle(message.result.text, true, 'card');
+        this.handle(message.result.text, true, 'card', detail(message.result));
       }
     });
     recognizer.on('error', (message) => {
@@ -178,9 +204,12 @@ export class VoskRecognizer implements DrillRecognizer {
     this.seen.clear();
 
     if (this.opts.mode === 'card') {
-      // accept[0] is the kana itself — the only form the model has as a word.
+      // Every spelling of this one mora that the model knows — the bare kana
+      // plus its katakana and long-vowel forms. A kana named in isolation is
+      // held long enough that «いい» is the honest transcription, and a
+      // grammar without it leaves the decoder no option but «[unk]».
       const previous = this.recognizer;
-      this.recognizer = this.spawn([expected.accept[0]]);
+      this.recognizer = this.spawn(expected.lexical);
       previous?.remove();
     }
   }
@@ -215,7 +244,12 @@ export class VoskRecognizer implements DrillRecognizer {
     this.events.onListening(false);
   }
 
-  private handle(rawText: string, final: boolean, source: 'card' | 'deck'): void {
+  private handle(
+    rawText: string,
+    final: boolean,
+    source: 'card' | 'deck',
+    detail?: HypothesisDetail,
+  ): void {
     const transcript = rawText.trim();
     if (!transcript || !this.current) return;
 
@@ -243,6 +277,7 @@ export class VoskRecognizer implements DrillRecognizer {
         atMs: Math.round(now - this.current.shownAt),
         final,
         verdict,
+        ...detail,
       };
 
       if (hits(verdict)) {
@@ -264,6 +299,7 @@ export class VoskRecognizer implements DrillRecognizer {
             atMs: Math.round(now - shownAt),
             final,
             verdict: lateVerdict,
+            ...detail,
           });
           return;
         }
@@ -283,6 +319,7 @@ export class VoskRecognizer implements DrillRecognizer {
           atMs: Math.round(now - this.current.shownAt),
           final,
           verdict,
+          ...detail,
         });
       }
     }
