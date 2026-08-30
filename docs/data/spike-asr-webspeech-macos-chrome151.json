@@ -1,0 +1,259 @@
+{
+  "recognizer": "Web Speech API",
+  "rule": "contains",
+  "timeoutMs": 6000,
+  "startedAt": "2026-08-28T08:09:11.493Z",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+  "stats": {
+    "total": 20,
+    "matched": 1,
+    "exact": 0,
+    "containsOnly": 1,
+    "timeouts": 19,
+    "skipped": 0,
+    "hitRate": 0.05,
+    "onsetMedian": 1614,
+    "matchMedian": 2332,
+    "asrLagMedian": 392,
+    "asrLagP90": 392,
+    "cardsWithWrongHypotheses": 5
+  },
+  "cards": [
+    {
+      "glyph": "ち",
+      "romaji": "chi",
+      "status": "timeout",
+      "onsetMs": 2301,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "り",
+      "romaji": "ri",
+      "status": "timeout",
+      "onsetMs": 938,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": [
+        { "transcript": "ち", "atMs": 385, "final": false, "matched": false },
+        { "transcript": "父", "atMs": 1697, "final": false, "matched": false }
+      ]
+    },
+    {
+      "glyph": "よ",
+      "romaji": "yo",
+      "status": "timeout",
+      "onsetMs": 1854,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "へ",
+      "romaji": "he",
+      "status": "timeout",
+      "onsetMs": 2368,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": [
+        { "transcript": "部屋", "atMs": 3140, "final": false, "matched": false },
+        { "transcript": "部屋", "atMs": 3732, "final": true, "matched": false }
+      ]
+    },
+    {
+      "glyph": "む",
+      "romaji": "mu",
+      "status": "timeout",
+      "onsetMs": 1758,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": [
+        { "transcript": "冷", "atMs": 347, "final": false, "matched": false },
+        { "transcript": "冷え", "atMs": 363, "final": false, "matched": false }
+      ]
+    },
+    {
+      "glyph": "め",
+      "romaji": "me",
+      "status": "timeout",
+      "onsetMs": 1878,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "か",
+      "romaji": "ka",
+      "status": "timeout",
+      "onsetMs": 1614,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "さ",
+      "romaji": "sa",
+      "status": "timeout",
+      "onsetMs": 1450,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "く",
+      "romaji": "ku",
+      "status": "timeout",
+      "onsetMs": 1158,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "も",
+      "romaji": "mo",
+      "status": "timeout",
+      "onsetMs": 1037,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "を",
+      "romaji": "wo",
+      "status": "timeout",
+      "onsetMs": 1635,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "た",
+      "romaji": "ta",
+      "status": "timeout",
+      "onsetMs": 1729,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "け",
+      "romaji": "ke",
+      "status": "match",
+      "onsetMs": 1940,
+      "matchMs": 2332,
+      "asrLagMs": 392,
+      "exact": false,
+      "matchedTranscript": "だけ",
+      "hypotheses": [
+        { "transcript": "だけ", "atMs": 2332, "final": false, "matched": true }
+      ]
+    },
+    {
+      "glyph": "す",
+      "romaji": "su",
+      "status": "timeout",
+      "onsetMs": 1381,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "え",
+      "romaji": "e",
+      "status": "timeout",
+      "onsetMs": 1253,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "こ",
+      "romaji": "ko",
+      "status": "timeout",
+      "onsetMs": 2451,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "き",
+      "romaji": "ki",
+      "status": "timeout",
+      "onsetMs": 2419,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": [
+        { "transcript": "コーヒー", "atMs": 3471, "final": false, "matched": false },
+        { "transcript": "コーヒー", "atMs": 4266, "final": true, "matched": false }
+      ]
+    },
+    {
+      "glyph": "し",
+      "romaji": "shi",
+      "status": "timeout",
+      "onsetMs": 336,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": [
+        { "transcript": "G", "atMs": 2260, "final": false, "matched": false }
+      ]
+    },
+    {
+      "glyph": "う",
+      "romaji": "u",
+      "status": "timeout",
+      "onsetMs": 1191,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    },
+    {
+      "glyph": "ゆ",
+      "romaji": "yu",
+      "status": "timeout",
+      "onsetMs": 862,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedTranscript": null,
+      "hypotheses": []
+    }
+  ]
+}
