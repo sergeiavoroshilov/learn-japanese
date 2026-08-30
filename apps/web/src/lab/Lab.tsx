@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { DECKS, VOICE_OOV_KANA, cardsOf, drawCards, type DeckId } from '../lib/kana';
+import { DECKS, VOICE_OOV_KANA, drawFrom, type DeckId, type KanaCard } from '../lib/kana';
+import { KanaGrid } from './KanaGrid';
+import { normalize } from '../lib/match';
 import { isWebSpeechSupported, type MatchRule } from '../lib/recognizer';
 import { DrillSession, type Engine, type SessionSnapshot } from '../lib/session';
 import { buildReport, summarize } from '../lib/stats';
@@ -20,6 +22,7 @@ const IDLE: SessionSnapshot = {
   current: null,
   lastStatus: null,
   liveHypotheses: [],
+  liveWitness: [],
   liveOnsetMs: null,
   outcomes: [],
   listening: false,
@@ -29,6 +32,15 @@ const IDLE: SessionSnapshot = {
 
 export function Lab() {
   const [decks, setDecks] = useState<DeckId[]>(['hira-basic']);
+  /**
+   * Individual cards in play. The deck chips decide which tables are on
+   * screen; this decides which of their moras a run actually draws from, so a
+   * measurement can be aimed at one row — «только гласные» — instead of a
+   * random twenty out of forty-six.
+   */
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(DECKS.find((d) => d.id === 'hira-basic')!.cards.map((c) => c.id)),
+  );
   const [count, setCount] = useState(20);
   const [timeoutMs, setTimeoutMs] = useState(6000);
   const [rule, setRule] = useState<MatchRule>('exact');
@@ -63,19 +75,23 @@ export function Lab() {
    * otherwise look like a recognition failure.
    */
   const grammarActive = activeEngine === 'vosk' && grammarMode !== 'none';
+  const shown = useMemo(() => DECKS.filter((d) => decks.includes(d.id)), [decks]);
+  const pool = useMemo<KanaCard[]>(
+    () => shown.flatMap((d) => d.cards).filter((c) => selected.has(c.id)),
+    [shown, selected],
+  );
   const vocabulary = useMemo(
     () =>
       grammarActive
-        ? cardsOf(decks)
-            .map((c) => c.kana)
-            .filter((kana) => !VOICE_OOV_KANA.includes(kana))
+        ? pool.map((c) => c.kana).filter((kana) => !VOICE_OOV_KANA.includes(kana))
         : null,
-    [grammarActive, decks],
+    [grammarActive, pool],
   );
 
   const start = useCallback(() => {
-    const deck = drawCards(decks, count).filter(
-      (card) => !grammarActive || !VOICE_OOV_KANA.includes(card.kana),
+    const deck = drawFrom(
+      pool.filter((card) => !grammarActive || !VOICE_OOV_KANA.includes(card.kana)),
+      count,
     );
     if (deck.length === 0) return;
     sessionRef.current?.stop();
@@ -97,7 +113,7 @@ export function Lab() {
     setStartedAt(new Date().toISOString());
     void session.start();
   }, [
-    decks,
+    pool,
     count,
     timeoutMs,
     rule,
@@ -145,6 +161,22 @@ export function Lab() {
     snapshot.liveHypotheses.length > 0 &&
     snapshot.liveHypotheses.every((h) => h.verdict.normalized === '');
 
+  /**
+   * What the control decoder made of the answer the card decoder refused.
+   * «услышал を» is actionable; «не расслышал» is not.
+   */
+  const heardInstead = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          snapshot.liveWitness
+            .map((t) => normalize(t))
+            .filter((t) => t !== '' && t !== snapshot.current?.kana),
+        ),
+      ),
+    [snapshot.liveWitness, snapshot.current],
+  );
+
   const copyReport = useCallback(async () => {
     const report = buildReport(snapshot.outcomes, {
       recognizer: snapshot.recognizerName,
@@ -168,8 +200,20 @@ export function Lab() {
     startedAt,
   ]);
 
-  const toggleDeck = (id: DeckId) =>
-    setDecks((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  /** Turning a table on brings all of its moras with it; off takes them away. */
+  const toggleDeck = (id: DeckId) => {
+    const deck = DECKS.find((d) => d.id === id)!;
+    const on = decks.includes(id);
+    setDecks((prev) => (on ? prev.filter((x) => x !== id) : [...prev, id]));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const card of deck.cards) {
+        if (on) next.delete(card.id);
+        else next.add(card.id);
+      }
+      return next;
+    });
+  };
 
   return (
     <main className="page">
@@ -230,6 +274,15 @@ export function Lab() {
               ))}
             </div>
           </div>
+
+          {shown.map((deck) => (
+            <KanaGrid
+              key={deck.id}
+              deck={deck}
+              selected={selected}
+              onChange={setSelected}
+            />
+          ))}
 
           <div className="row">
             <label className="field">
@@ -366,7 +419,7 @@ export function Lab() {
             )}
           </div>
 
-          <button className="primary" onClick={start} disabled={!supported || decks.length === 0}>
+          <button className="primary" onClick={start} disabled={!supported || pool.length === 0}>
             {snapshot.outcomes.length > 0 ? 'Ещё сессия' : 'Начать сессию'}
           </button>
         </section>
@@ -397,7 +450,13 @@ export function Lab() {
           {showRomaji && <div className="romaji">{snapshot.current?.romaji}</div>}
 
           <div className="live">
-            {notPlaced && <div className="retry">не расслышал — скажите ещё раз</div>}
+            {notPlaced && (
+              <div className="retry">
+                {heardInstead.length > 0
+                  ? `услышал «${heardInstead.join('», «')}» — скажите ещё раз`
+                  : 'не расслышал — скажите ещё раз'}
+              </div>
+            )}
             <div className="live-onset">
               {snapshot.liveOnsetMs === null
                 ? 'ждём речь…'

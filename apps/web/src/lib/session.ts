@@ -60,6 +60,12 @@ export interface SessionSnapshot {
   /** Set briefly after a match so the UI can flash green. */
   lastStatus: CardStatus | null;
   liveHypotheses: Hypothesis[];
+  /**
+   * What the deck-wide control decoder has said about the card on screen.
+   * Live, because «услышал を» is the one thing that tells the learner what to
+   * fix — «не расслышал» tells them nothing.
+   */
+  liveWitness: string[];
   liveOnsetMs: number | null;
   outcomes: CardOutcome[];
   listening: boolean;
@@ -143,6 +149,7 @@ export class DrillSession {
       onLateMatch: (h) => this.recordLateMatch(h),
       onWitness: (transcript) => {
         this.liveWitness = [...this.liveWitness, transcript];
+        this.emit();
       },
       onError: (err) => {
         this.error = err;
@@ -370,6 +377,7 @@ export class DrillSession {
       current: this.queue[this.cardIndex] ?? null,
       lastStatus: this.lastStatus,
       liveHypotheses: this.liveHypotheses,
+      liveWitness: this.liveWitness,
       liveOnsetMs: this.liveOnsetMs,
       outcomes: this.outcomes,
       listening: this.listening,

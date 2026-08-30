@@ -1,3 +1,4 @@
+import { normalize } from '../lib/match';
 import type { SessionSnapshot } from '../lib/session';
 import type { CardResult } from './Trainer';
 import { ms } from './format';
@@ -28,6 +29,19 @@ export function Drill({ snapshot, micLevel, showRomaji, lastResult, onSkip, onSt
     !paused &&
     snapshot.liveHypotheses.length > 0 &&
     snapshot.liveHypotheses.every((h) => h.verdict.normalized === '');
+
+  /**
+   * What the control decoder heard instead. Naming it turns a dead end into a
+   * correction: «услышал を» says the /u/ came out rounded, «не расслышал»
+   * says nothing at all.
+   */
+  const heardInstead = Array.from(
+    new Set(
+      snapshot.liveWitness
+        .map((t) => normalize(t))
+        .filter((t) => t !== '' && t !== snapshot.current?.kana),
+    ),
+  );
 
   const feedbackCard = paused ? snapshot.outcomes[snapshot.outcomes.length - 1]?.card : undefined;
   const showAnswer = paused && snapshot.lastStatus !== 'match' && feedbackCard;
@@ -71,7 +85,13 @@ export function Drill({ snapshot, micLevel, showRomaji, lastResult, onSkip, onSt
       )}
 
       <div className="live">
-        {notPlaced && <div className="retry">не расслышал — скажите ещё раз</div>}
+        {notPlaced && (
+          <div className="retry">
+            {heardInstead.length > 0
+              ? `услышал «${heardInstead.join('», «')}» — скажите ещё раз`
+              : 'не расслышал — скажите ещё раз'}
+          </div>
+        )}
         {!paused && snapshot.liveOnsetMs !== null && (
           <div className="live-onset">{ms(snapshot.liveOnsetMs)}</div>
         )}

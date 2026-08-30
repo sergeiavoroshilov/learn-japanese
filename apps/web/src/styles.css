@@ -160,3 +160,31 @@ tr.skipped td { color: var(--muted); }
 .stage .live { align-items: center; min-height: 40px; }
 .foot { color: var(--muted); font-size: 13px; max-width: 70ch; }
 .foot a { color: var(--accent); }
+
+/* kana grid (lab) */
+.grid-wrap { display: flex; flex-direction: column; gap: 8px; }
+.grid-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.grid-title { font-size: 14px; }
+.grid-count { color: var(--muted); font-size: 13px; }
+
+.kana-grid { width: auto; border-collapse: separate; border-spacing: 4px; }
+.kana-grid th, .kana-grid td { border: 0; padding: 0; }
+
+.grid-box {
+  min-width: 44px; padding: 6px 8px;
+  background: var(--panel-2); border: 1px solid #303851; border-radius: 8px;
+  color: var(--muted); font-size: 15px; cursor: pointer;
+}
+.grid-box.all { border-color: var(--accent); color: var(--accent); }
+.grid-box.some { border-color: var(--accent); color: var(--text); border-style: dashed; }
+
+.cell {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  min-width: 52px; padding: 5px 6px;
+  background: transparent; border: 1px solid transparent; border-radius: 8px;
+  color: var(--muted); cursor: pointer;
+}
+.cell.on { background: var(--panel-2); border-color: var(--accent); color: var(--text); }
+.cell.oov { text-decoration: line-through; opacity: 0.55; }
+.cell-kana { font-size: 19px; line-height: 1.1; }
+.cell-romaji { font-size: 11px; letter-spacing: 0.04em; }

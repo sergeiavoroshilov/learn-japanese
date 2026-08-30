@@ -22,68 +22,126 @@ export interface KanaCard {
   romaji: string;
   script: KanaScript;
   group: KanaGroup;
+  /** Gojūon row: '' for the bare vowels, 'k' for か行, 'ky' for きゃ… */
+  row: string;
+  /** Gojūon column: the vowel, 'a' | 'i' | 'u' | 'e' | 'o'. */
+  col: string;
   /** Extra romaji spellings an engine might return (kunrei-shiki etc). */
   alt?: string[];
   /** The reading is outside the recogniser's lexicon. */
   voiceOov?: boolean;
 }
 
+/** kana, romaji, then any alternative romaji spellings. */
 type Entry = [string, string, ...string[]];
 
-/** 46 base moras. */
-const BASIC: Entry[] = [
-  ['あ', 'a'], ['い', 'i'], ['う', 'u'], ['え', 'e'], ['お', 'o'],
-  ['か', 'ka'], ['き', 'ki'], ['く', 'ku'], ['け', 'ke'], ['こ', 'ko'],
-  ['さ', 'sa'], ['し', 'shi', 'si'], ['す', 'su'], ['せ', 'se'], ['そ', 'so'],
-  ['た', 'ta'], ['ち', 'chi', 'ti'], ['つ', 'tsu', 'tu'], ['て', 'te'], ['と', 'to'],
-  ['な', 'na'], ['に', 'ni'], ['ぬ', 'nu'], ['ね', 'ne'], ['の', 'no'],
-  ['は', 'ha'], ['ひ', 'hi'], ['ふ', 'fu', 'hu'], ['へ', 'he'], ['ほ', 'ho'],
-  ['ま', 'ma'], ['み', 'mi'], ['む', 'mu'], ['め', 'me'], ['も', 'mo'],
-  ['や', 'ya'], ['ゆ', 'yu'], ['よ', 'yo'],
-  ['ら', 'ra'], ['り', 'ri'], ['る', 'ru'], ['れ', 're'], ['ろ', 'ro'],
-  ['わ', 'wa'], ['を', 'wo', 'o'], ['ん', 'n', 'nn'],
-];
+interface RowSpec {
+  key: string;
+  /** One entry per column; null where the gojūon table has a gap. */
+  cells: (Entry | null)[];
+}
+
+interface TableSpec {
+  columns: string[];
+  rows: RowSpec[];
+}
+
+/** 46 base moras, laid out as the gojūon table rather than a flat list. */
+const BASIC: TableSpec = {
+  columns: ['a', 'i', 'u', 'e', 'o'],
+  rows: [
+    { key: '', cells: [['あ', 'a'], ['い', 'i'], ['う', 'u'], ['え', 'e'], ['お', 'o']] },
+    { key: 'k', cells: [['か', 'ka'], ['き', 'ki'], ['く', 'ku'], ['け', 'ke'], ['こ', 'ko']] },
+    { key: 's', cells: [['さ', 'sa'], ['し', 'shi', 'si'], ['す', 'su'], ['せ', 'se'], ['そ', 'so']] },
+    { key: 't', cells: [['た', 'ta'], ['ち', 'chi', 'ti'], ['つ', 'tsu', 'tu'], ['て', 'te'], ['と', 'to']] },
+    { key: 'n', cells: [['な', 'na'], ['に', 'ni'], ['ぬ', 'nu'], ['ね', 'ne'], ['の', 'no']] },
+    { key: 'h', cells: [['は', 'ha'], ['ひ', 'hi'], ['ふ', 'fu', 'hu'], ['へ', 'he'], ['ほ', 'ho']] },
+    { key: 'm', cells: [['ま', 'ma'], ['み', 'mi'], ['む', 'mu'], ['め', 'me'], ['も', 'mo']] },
+    { key: 'y', cells: [['や', 'ya'], null, ['ゆ', 'yu'], null, ['よ', 'yo']] },
+    { key: 'r', cells: [['ら', 'ra'], ['り', 'ri'], ['る', 'ru'], ['れ', 're'], ['ろ', 'ro']] },
+    { key: 'w', cells: [['わ', 'wa'], null, null, null, ['を', 'wo', 'o']] },
+    // ん belongs to no row of the table; it gets one of its own.
+    { key: 'N', cells: [['ん', 'n', 'nn'], null, null, null, null] },
+  ],
+};
 
 /** Voiced / semi-voiced. */
-const DAKUTEN: Entry[] = [
-  ['が', 'ga'], ['ぎ', 'gi'], ['ぐ', 'gu'], ['げ', 'ge'], ['ご', 'go'],
-  ['ざ', 'za'], ['じ', 'ji', 'zi'], ['ず', 'zu'], ['ぜ', 'ze'], ['ぞ', 'zo'],
-  ['だ', 'da'], ['ぢ', 'ji', 'di'], ['づ', 'zu', 'du'], ['で', 'de'], ['ど', 'do'],
-  ['ば', 'ba'], ['び', 'bi'], ['ぶ', 'bu'], ['べ', 'be'], ['ぼ', 'bo'],
-  ['ぱ', 'pa'], ['ぴ', 'pi'], ['ぷ', 'pu'], ['ぺ', 'pe'], ['ぽ', 'po'],
-];
+const DAKUTEN: TableSpec = {
+  columns: ['a', 'i', 'u', 'e', 'o'],
+  rows: [
+    { key: 'g', cells: [['が', 'ga'], ['ぎ', 'gi'], ['ぐ', 'gu'], ['げ', 'ge'], ['ご', 'go']] },
+    { key: 'z', cells: [['ざ', 'za'], ['じ', 'ji', 'zi'], ['ず', 'zu'], ['ぜ', 'ze'], ['ぞ', 'zo']] },
+    { key: 'd', cells: [['だ', 'da'], ['ぢ', 'ji', 'di'], ['づ', 'zu', 'du'], ['で', 'de'], ['ど', 'do']] },
+    { key: 'b', cells: [['ば', 'ba'], ['び', 'bi'], ['ぶ', 'bu'], ['べ', 'be'], ['ぼ', 'bo']] },
+    { key: 'p', cells: [['ぱ', 'pa'], ['ぴ', 'pi'], ['ぷ', 'pu'], ['ぺ', 'pe'], ['ぽ', 'po']] },
+  ],
+};
 
-/** Contracted sounds. */
-const YOUON: Entry[] = [
-  ['きゃ', 'kya'], ['きゅ', 'kyu'], ['きょ', 'kyo'],
-  ['しゃ', 'sha', 'sya'], ['しゅ', 'shu', 'syu'], ['しょ', 'sho', 'syo'],
-  ['ちゃ', 'cha', 'tya'], ['ちゅ', 'chu', 'tyu'], ['ちょ', 'cho', 'tyo'],
-  ['にゃ', 'nya'], ['にゅ', 'nyu'], ['にょ', 'nyo'],
-  ['ひゃ', 'hya'], ['ひゅ', 'hyu'], ['ひょ', 'hyo'],
-  ['みゃ', 'mya'], ['みゅ', 'myu'], ['みょ', 'myo'],
-  ['りゃ', 'rya'], ['りゅ', 'ryu'], ['りょ', 'ryo'],
-  ['ぎゃ', 'gya'], ['ぎゅ', 'gyu'], ['ぎょ', 'gyo'],
-  ['じゃ', 'ja', 'jya'], ['じゅ', 'ju', 'jyu'], ['じょ', 'jo', 'jyo'],
-  ['びゃ', 'bya'], ['びゅ', 'byu'], ['びょ', 'byo'],
-  ['ぴゃ', 'pya'], ['ぴゅ', 'pyu'], ['ぴょ', 'pyo'],
-];
+/** Contracted sounds — three columns, not five. */
+const YOUON: TableSpec = {
+  columns: ['a', 'u', 'o'],
+  rows: [
+    { key: 'ky', cells: [['きゃ', 'kya'], ['きゅ', 'kyu'], ['きょ', 'kyo']] },
+    { key: 'sh', cells: [['しゃ', 'sha', 'sya'], ['しゅ', 'shu', 'syu'], ['しょ', 'sho', 'syo']] },
+    { key: 'ch', cells: [['ちゃ', 'cha', 'tya'], ['ちゅ', 'chu', 'tyu'], ['ちょ', 'cho', 'tyo']] },
+    { key: 'ny', cells: [['にゃ', 'nya'], ['にゅ', 'nyu'], ['にょ', 'nyo']] },
+    { key: 'hy', cells: [['ひゃ', 'hya'], ['ひゅ', 'hyu'], ['ひょ', 'hyo']] },
+    { key: 'my', cells: [['みゃ', 'mya'], ['みゅ', 'myu'], ['みょ', 'myo']] },
+    { key: 'ry', cells: [['りゃ', 'rya'], ['りゅ', 'ryu'], ['りょ', 'ryo']] },
+    { key: 'gy', cells: [['ぎゃ', 'gya'], ['ぎゅ', 'gyu'], ['ぎょ', 'gyo']] },
+    { key: 'j', cells: [['じゃ', 'ja', 'jya'], ['じゅ', 'ju', 'jyu'], ['じょ', 'jo', 'jyo']] },
+    { key: 'by', cells: [['びゃ', 'bya'], ['びゅ', 'byu'], ['びょ', 'byo']] },
+    { key: 'py', cells: [['ぴゃ', 'pya'], ['ぴゅ', 'pyu'], ['ぴょ', 'pyo']] },
+  ],
+};
 
-const TABLES: Record<KanaGroup, Entry[]> = { basic: BASIC, dakuten: DAKUTEN, youon: YOUON };
+const TABLES: Record<KanaGroup, TableSpec> = { basic: BASIC, dakuten: DAKUTEN, youon: YOUON };
 
-function build(script: KanaScript, group: KanaGroup): KanaCard[] {
+export interface GridRow {
+  key: string;
+  /** What labels the row in the UI — its first mora, e.g. か for か行. */
+  label: string;
+  /** Aligned to the grid's columns; null where the table has a gap. */
+  cells: (KanaCard | null)[];
+}
+
+export interface DeckGrid {
+  columns: string[];
+  rows: GridRow[];
+}
+
+function buildGrid(script: KanaScript, group: KanaGroup): DeckGrid {
   const prefix = script === 'hiragana' ? 'hira' : 'kata';
-  return TABLES[group].map(([kana, romaji, ...alt]) => ({
-    // Keyed by script and glyph, not by romaji: じ/ぢ and ず/づ share a
-    // reading but are different cards, and this id is the SRS key.
-    id: `${prefix}-${kana}`,
-    glyph: script === 'hiragana' ? kana : toKatakana(kana),
-    kana,
-    romaji,
-    script,
-    group,
-    alt: alt.length ? alt : undefined,
-    voiceOov: VOICE_OOV_KANA.includes(kana) || undefined,
-  }));
+  const table = TABLES[group];
+  return {
+    columns: table.columns,
+    rows: table.rows.map((spec) => {
+      const cells = spec.cells.map((entry, i) => {
+        if (!entry) return null;
+        const [kana, romaji, ...alt] = entry;
+        const card: KanaCard = {
+          // Keyed by script and glyph, not by romaji: じ/ぢ and ず/づ share a
+          // reading but are different cards, and this id is the SRS key.
+          id: `${prefix}-${kana}`,
+          glyph: script === 'hiragana' ? kana : toKatakana(kana),
+          kana,
+          romaji,
+          script,
+          group,
+          row: spec.key,
+          col: table.columns[i]!,
+          alt: alt.length ? alt : undefined,
+          voiceOov: VOICE_OOV_KANA.includes(kana) || undefined,
+        };
+        return card;
+      });
+      return {
+        key: spec.key,
+        label: cells.find((c): c is KanaCard => c !== null)!.glyph,
+        cells,
+      };
+    }),
+  };
 }
 
 export interface Deck {
@@ -91,6 +149,7 @@ export interface Deck {
   label: string;
   script: KanaScript;
   group: KanaGroup;
+  grid: DeckGrid;
   cards: KanaCard[];
 }
 
@@ -107,12 +166,14 @@ const SCRIPT_LABELS: Record<KanaScript, string> = {
 
 export const DECKS: Deck[] = (['hiragana', 'katakana'] as KanaScript[]).flatMap((script) =>
   (['basic', 'dakuten', 'youon'] as KanaGroup[]).map((group) => {
-    const cards = build(script, group);
+    const grid = buildGrid(script, group);
+    const cards = grid.rows.flatMap((r) => r.cells.filter((c): c is KanaCard => c !== null));
     return {
       id: `${script === 'hiragana' ? 'hira' : 'kata'}-${group}` as DeckId,
       label: `${SCRIPT_LABELS[script]} · ${GROUP_LABELS[group]} (${cards.length})`,
       script,
       group,
+      grid,
       cards,
     };
   }),
@@ -137,8 +198,7 @@ export function cardsOf(decks: DeckId[]): KanaCard[] {
 }
 
 /** Random cards without repeating a glyph until the pool is exhausted. */
-export function drawCards(decks: DeckId[], count: number): KanaCard[] {
-  const pool = cardsOf(decks);
+export function drawFrom(pool: KanaCard[], count: number): KanaCard[] {
   if (pool.length === 0) return [];
   const out: KanaCard[] = [];
   let bag: KanaCard[] = [];
@@ -147,6 +207,10 @@ export function drawCards(decks: DeckId[], count: number): KanaCard[] {
     out.push(bag.pop()!);
   }
   return out;
+}
+
+export function drawCards(decks: DeckId[], count: number): KanaCard[] {
+  return drawFrom(cardsOf(decks), count);
 }
 
 export function shuffle<T>(items: readonly T[]): T[] {
