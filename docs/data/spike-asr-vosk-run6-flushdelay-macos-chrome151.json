@@ -1,0 +1,719 @@
+{
+  "recognizer": "Vosk (словарь из одной ожидаемой моры)",
+  "rule": "exact",
+  "grammarMode": "card",
+  "flushDelayMs": 250,
+  "grammarSize": 1,
+  "timeoutMs": 6000,
+  "startedAt": "2026-08-30T15:02:23.123Z",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+  "stats": {
+    "total": 20,
+    "matched": 15,
+    "exact": 15,
+    "containsOnly": 0,
+    "matchedByDeck": 0,
+    "late": 0,
+    "timeouts": 5,
+    "skipped": 0,
+    "hitRate": 0.75,
+    "eventualHitRate": 0.75,
+    "lateMedian": null,
+    "onsetMedian": 940,
+    "matchMedian": 1328,
+    "asrLagMedian": 371,
+    "asrLagP90": 1291,
+    "cardsWithWrongHypotheses": 13,
+    "notPlaced": 1,
+    "engineSilent": 0
+  },
+  "cards": [
+    {
+      "glyph": "ほ",
+      "romaji": "ho",
+      "status": "timeout",
+      "onsetMs": 1764,
+      "speechMs": 140,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedBy": null,
+      "lateMs": null,
+      "matchedTranscript": null,
+      "witnessHeard": [
+        "も",
+        "[unk]",
+        "あ"
+      ],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 2180,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 2545,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "も",
+          "source": "deck",
+          "atMs": 2606,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "source": "deck",
+          "atMs": 4378,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "あ",
+          "source": "deck",
+          "atMs": 5905,
+          "final": true,
+          "matched": false
+        }
+      ]
+    },
+    {
+      "glyph": "ま",
+      "romaji": "ma",
+      "status": "match",
+      "onsetMs": 1158,
+      "speechMs": 242,
+      "matchMs": 1529,
+      "asrLagMs": 371,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "ま",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "ま",
+          "source": "card",
+          "atMs": 1529,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "は",
+      "romaji": "ha",
+      "status": "match",
+      "onsetMs": 1235,
+      "speechMs": 200,
+      "matchMs": 1497,
+      "asrLagMs": 262,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "は",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 131,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "は",
+          "source": "card",
+          "atMs": 1497,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "ぬ",
+      "romaji": "nu",
+      "status": "match",
+      "onsetMs": 817,
+      "speechMs": 341,
+      "matchMs": 2533,
+      "asrLagMs": 1716,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "ぬ",
+      "witnessHeard": [
+        "め"
+      ],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 1565,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 1660,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "め",
+          "source": "deck",
+          "atMs": 1720,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "ぬ",
+          "source": "card",
+          "atMs": 2533,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "に",
+      "romaji": "ni",
+      "status": "match",
+      "onsetMs": 800,
+      "speechMs": 299,
+      "matchMs": 1309,
+      "asrLagMs": 509,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "に",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "に",
+          "source": "card",
+          "atMs": 1309,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "わ",
+      "romaji": "wa",
+      "status": "match",
+      "onsetMs": 727,
+      "speechMs": 281,
+      "matchMs": 1177,
+      "asrLagMs": 450,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "わ",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "わ",
+          "source": "card",
+          "atMs": 1177,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "る",
+      "romaji": "ru",
+      "status": "timeout",
+      "onsetMs": 1148,
+      "speechMs": 242,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedBy": null,
+      "lateMs": null,
+      "matchedTranscript": null,
+      "witnessHeard": [
+        "ろ",
+        "ろ"
+      ],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 1429,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 1968,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "ろ",
+          "source": "deck",
+          "atMs": 1999,
+          "final": true,
+          "matched": false
+        }
+      ]
+    },
+    {
+      "glyph": "そ",
+      "romaji": "so",
+      "status": "match",
+      "onsetMs": 961,
+      "speechMs": 239,
+      "matchMs": 1210,
+      "asrLagMs": 249,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "そ",
+      "witnessHeard": [
+        "[unk]"
+      ],
+      "hypotheses": [
+        {
+          "transcript": "[unk] [unk]",
+          "source": "card",
+          "atMs": 489,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "[unk] [unk]",
+          "source": "card",
+          "atMs": 651,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "source": "deck",
+          "atMs": 712,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "そ",
+          "source": "card",
+          "atMs": 1210,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "ち",
+      "romaji": "chi",
+      "status": "match",
+      "onsetMs": 1060,
+      "speechMs": 242,
+      "matchMs": 1325,
+      "asrLagMs": 265,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "ち",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "ち",
+          "source": "card",
+          "atMs": 1325,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "き",
+      "romaji": "ki",
+      "status": "match",
+      "onsetMs": 877,
+      "speechMs": 200,
+      "matchMs": 1328,
+      "asrLagMs": 451,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "き",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "き",
+          "source": "card",
+          "atMs": 1328,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "ろ",
+      "romaji": "ro",
+      "status": "match",
+      "onsetMs": 940,
+      "speechMs": 281,
+      "matchMs": 1411,
+      "asrLagMs": 471,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "ろ",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "ろ",
+          "source": "card",
+          "atMs": 1411,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "う",
+      "romaji": "u",
+      "status": "timeout",
+      "onsetMs": 809,
+      "speechMs": 260,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedBy": null,
+      "lateMs": null,
+      "matchedTranscript": null,
+      "witnessHeard": [
+        "を",
+        "を"
+      ],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 3048,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 3358,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "を",
+          "source": "deck",
+          "atMs": 3420,
+          "final": true,
+          "matched": false
+        }
+      ]
+    },
+    {
+      "glyph": "と",
+      "romaji": "to",
+      "status": "match",
+      "onsetMs": 77,
+      "speechMs": 220,
+      "matchMs": 1368,
+      "asrLagMs": 1291,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "と",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 481,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "[unk] [unk] [unk]",
+          "source": "card",
+          "atMs": 743,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "と",
+          "source": "card",
+          "atMs": 1368,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "こ",
+      "romaji": "ko",
+      "status": "match",
+      "onsetMs": 919,
+      "speechMs": 242,
+      "matchMs": 1261,
+      "asrLagMs": 342,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "こ",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 146,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "こ",
+          "source": "card",
+          "atMs": 1261,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "を",
+      "romaji": "wo",
+      "status": "match",
+      "onsetMs": 918,
+      "speechMs": 240,
+      "matchMs": 1246,
+      "asrLagMs": 328,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "を",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 157,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "を",
+          "source": "card",
+          "atMs": 1246,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "ふ",
+      "romaji": "fu",
+      "status": "match",
+      "onsetMs": 1611,
+      "speechMs": 238,
+      "matchMs": 1960,
+      "asrLagMs": 349,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "ふ",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 162,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "ふ",
+          "source": "card",
+          "atMs": 1960,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "つ",
+      "romaji": "tsu",
+      "status": "timeout",
+      "onsetMs": 1221,
+      "speechMs": 221,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedBy": null,
+      "lateMs": null,
+      "matchedTranscript": null,
+      "witnessHeard": [
+        "そ",
+        "[unk]",
+        "そ"
+      ],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 130,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 1489,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "そ",
+          "source": "deck",
+          "atMs": 1988,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "source": "deck",
+          "atMs": 3563,
+          "final": true,
+          "matched": false
+        }
+      ]
+    },
+    {
+      "glyph": "い",
+      "romaji": "i",
+      "status": "timeout",
+      "onsetMs": 1538,
+      "speechMs": 419,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "matchedBy": null,
+      "lateMs": null,
+      "matchedTranscript": null,
+      "witnessHeard": [
+        "[unk]",
+        "[unk]",
+        "[unk]"
+      ],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 476,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "[unk] [unk]",
+          "source": "card",
+          "atMs": 615,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "source": "deck",
+          "atMs": 675,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "source": "card",
+          "atMs": 2243,
+          "final": true,
+          "matched": false
+        }
+      ]
+    },
+    {
+      "glyph": "す",
+      "romaji": "su",
+      "status": "match",
+      "onsetMs": null,
+      "speechMs": null,
+      "matchMs": 1445,
+      "asrLagMs": null,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "す",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "す",
+          "source": "card",
+          "atMs": 1445,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "ゆ",
+      "romaji": "yu",
+      "status": "match",
+      "onsetMs": 0,
+      "speechMs": 159,
+      "matchMs": 1189,
+      "asrLagMs": 1189,
+      "exact": true,
+      "matchedBy": "card",
+      "lateMs": null,
+      "matchedTranscript": "ゆ",
+      "witnessHeard": [
+        "そ"
+      ],
+      "hypotheses": [
+        {
+          "transcript": "[unk] [unk]",
+          "source": "card",
+          "atMs": 458,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "[unk] [unk]",
+          "source": "card",
+          "atMs": 628,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "そ",
+          "source": "deck",
+          "atMs": 691,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "ゆ",
+          "source": "card",
+          "atMs": 1189,
+          "final": false,
+          "matched": true
+        }
+      ]
+    }
+  ]
+}

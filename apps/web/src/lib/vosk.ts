@@ -24,6 +24,9 @@ export const VOSK_MODEL_URL = '/models/vosk-model-small-ja-0.22.tar.gz';
  */
 export const VOSK_OOV_KANA = ['びゃ', 'ぴゃ', 'ぴょ'];
 
+/** How long after a card appears a bare «[unk]» is still the previous card's tail. */
+const TAIL_WINDOW_MS = 300;
+
 /**
  * How tightly the decoder is constrained.
  *
@@ -217,6 +220,14 @@ export class VoskRecognizer implements DrillRecognizer {
   private handle(rawText: string, final: boolean, source: 'card' | 'deck'): void {
     const transcript = rawText.trim();
     if (!transcript || !this.current) return;
+
+    // Closing a card flushes the decoder, and that final result lands just
+    // after the next card appears. An empty-but-for-[unk] result in the first
+    // moments is that tail, not an answer to the card now on screen.
+    const sinceShown = performance.now() - this.current.shownAt;
+    if (sinceShown < TAIL_WINDOW_MS && judge(transcript, this.current.expected).normalized === '') {
+      return;
+    }
 
     const key = `${source}:${transcript}:${final}:${this.armed}`;
     if (this.seen.has(key)) return;

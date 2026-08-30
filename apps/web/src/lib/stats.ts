@@ -45,6 +45,12 @@ export interface SessionStats {
   notPlaced: number;
   /** Timeouts where the decoder said nothing whatsoever. */
   engineSilent: number;
+  /**
+   * Cards that were eventually accepted but only after the decoder had first
+   * answered «[unk]» — i.e. the learner had to say it again. The cost of the
+   * engine's strictness, in repeats rather than in lost cards.
+   */
+  acceptedAfterRepeat: number;
 }
 
 export function summarize(outcomes: CardOutcome[]): SessionStats {
@@ -70,8 +76,12 @@ export function summarize(outcomes: CardOutcome[]): SessionStats {
     matchMedian: percentile(nums((o) => o.matchMs), 50),
     asrLagMedian: percentile(nums((o) => o.asrLagMs), 50),
     asrLagP90: percentile(nums((o) => o.asrLagMs), 90),
+    // «[unk]» is counted under notPlaced; lumping it in here would call every
+    // unplaced sound a misrecognised mora.
     cardsWithWrongHypotheses: outcomes.filter((o) =>
-      o.hypotheses.some((h) => !h.verdict.contains && !h.verdict.partial),
+      o.hypotheses.some(
+        (h) => h.verdict.normalized !== '' && !h.verdict.contains && !h.verdict.partial,
+      ),
     ).length,
     notPlaced: outcomes.filter(
       (o) =>
@@ -81,6 +91,9 @@ export function summarize(outcomes: CardOutcome[]): SessionStats {
     ).length,
     engineSilent: outcomes.filter((o) => o.status === 'timeout' && o.hypotheses.length === 0)
       .length,
+    acceptedAfterRepeat: matched.filter((o) =>
+      o.hypotheses.some((h) => h.verdict.normalized === ''),
+    ).length,
   };
 }
 

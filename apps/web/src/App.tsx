@@ -448,6 +448,11 @@ export function App() {
               hint="движок ответил [unk]"
             />
             <Stat label="Движок промолчал" value={String(stats.engineSilent)} />
+            <Stat
+              label="Зачтено со второй попытки"
+              value={String(stats.acceptedAfterRepeat)}
+              hint={`из ${stats.matched}`}
+            />
             <Stat label="Таймауты" value={String(stats.timeouts)} />
             <Stat label="Точных / по подстроке" value={`${stats.exact} / ${stats.containsOnly}`} />
             <Stat label="Начало речи, медиана" value={ms(stats.onsetMedian)} />
