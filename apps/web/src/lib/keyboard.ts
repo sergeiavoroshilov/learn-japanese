@@ -52,6 +52,9 @@ export class KeyboardSource implements DrillRecognizer, OnsetSource {
     this.onOnset = null;
   }
 
+  /** Typing has no engine lag, so there is nothing to commit early. */
+  onSpeechEnd(): void {}
+
   stop(): void {
     window.removeEventListener('keydown', this.listener);
     this.disarm();

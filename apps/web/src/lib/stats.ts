@@ -15,10 +15,20 @@ export interface SessionStats {
   matched: number;
   exact: number;
   containsOnly: number;
+  /** Right answer, but only after the card had closed. */
+  late: number;
   timeouts: number;
   skipped: number;
-  /** Share of cards the engine matched at all. */
+  /** Share of cards matched in time. */
   hitRate: number;
+  /**
+   * Share the engine got right at all, counting late answers. The gap between
+   * this and hitRate is pure latency: recognition that works but arrives too
+   * slowly to drive a speed drill.
+   */
+  eventualHitRate: number;
+  /** Median delay of those late answers, from card shown to answer. */
+  lateMedian: number | null;
   onsetMedian: number | null;
   matchMedian: number | null;
   asrLagMedian: number | null;
@@ -29,6 +39,7 @@ export interface SessionStats {
 
 export function summarize(outcomes: CardOutcome[]): SessionStats {
   const matched = outcomes.filter((o) => o.status === 'match');
+  const late = outcomes.filter((o) => o.status === 'late');
   const nums = (pick: (o: CardOutcome) => number | null) =>
     outcomes.map(pick).filter((v): v is number => v !== null);
 
@@ -37,9 +48,13 @@ export function summarize(outcomes: CardOutcome[]): SessionStats {
     matched: matched.length,
     exact: matched.filter((o) => o.exact === true).length,
     containsOnly: matched.filter((o) => o.exact === false).length,
+    late: late.length,
     timeouts: outcomes.filter((o) => o.status === 'timeout').length,
     skipped: outcomes.filter((o) => o.status === 'skipped').length,
     hitRate: outcomes.length === 0 ? 0 : matched.length / outcomes.length,
+    eventualHitRate:
+      outcomes.length === 0 ? 0 : (matched.length + late.length) / outcomes.length,
+    lateMedian: percentile(nums((o) => o.lateMs), 50),
     onsetMedian: percentile(nums((o) => o.onsetMs), 50),
     matchMedian: percentile(nums((o) => o.matchMs), 50),
     asrLagMedian: percentile(nums((o) => o.asrLagMs), 50),
@@ -67,6 +82,7 @@ export interface RunReport {
     matchMs: number | null;
     asrLagMs: number | null;
     exact: boolean | null;
+    lateMs: number | null;
     matchedTranscript: string | null;
     hypotheses: { transcript: string; atMs: number; final: boolean; matched: boolean }[];
   }[];
@@ -94,6 +110,7 @@ export function buildReport(
       matchMs: o.matchMs,
       asrLagMs: o.asrLagMs,
       exact: o.exact,
+      lateMs: o.lateMs,
       matchedTranscript: o.matchedTranscript,
       hypotheses: o.hypotheses.map((h) => ({
         transcript: h.transcript,

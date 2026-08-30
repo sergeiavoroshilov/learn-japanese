@@ -46,15 +46,17 @@ export class VoskRecognizer implements DrillRecognizer {
 
   private model: Model | null = null;
   private recognizer: KaldiRecognizer | null = null;
-  private expected: Expected | null = null;
-  private shownAt = 0;
+  private current: { expected: Expected; shownAt: number } | null = null;
+  /**
+   * The card before this one. Vosk often commits an answer just after the
+   * drill has moved on; judged against this, such a result is recorded as a
+   * late answer to the right card instead of a wrong one to the next.
+   */
+  private previous: { expected: Expected; shownAt: number } | null = null;
+  /** False between cards: results then belong to the card that just closed. */
+  private armed = false;
   private matched = false;
   private seen = new Set<string>();
-  /**
-   * Vosk keeps decoding one continuous utterance, so its partial text carries
-   * residue from previous cards; everything up to this offset is ignored.
-   */
-  private partialBase = 0;
 
   constructor(
     private readonly events: RecognizerEvents,
@@ -110,19 +112,33 @@ export class VoskRecognizer implements DrillRecognizer {
   }
 
   expect(expected: Expected, shownAt: number): void {
-    this.expected = expected;
-    this.shownAt = shownAt;
+    this.previous = this.current;
+    this.current = { expected, shownAt };
+    this.armed = true;
     this.matched = false;
     this.seen.clear();
-    this.partialBase = this.lastPartialLength;
+  }
+
+  /**
+   * Commit the current utterance and reset the decoder. Called when the drill's
+   * VAD hears the answer end and whenever a card closes, so each card is
+   * decoded on its own — earlier this class trimmed the previous card's text
+   * off the partial by length, which cut mid-token and produced «unk]».
+   */
+  flush(): void {
+    this.recognizer?.retrieveFinalResult();
   }
 
   disarm(): void {
-    this.expected = null;
+    // Keep the card itself: an answer landing in the gap between cards is a
+    // late answer to it, not noise.
+    this.armed = false;
   }
 
   stop(): void {
-    this.expected = null;
+    this.armed = false;
+    this.current = null;
+    this.previous = null;
     this.recognizer?.remove();
     this.recognizer = null;
     this.model?.terminate();
@@ -130,30 +146,65 @@ export class VoskRecognizer implements DrillRecognizer {
     this.events.onListening(false);
   }
 
-  private lastPartialLength = 0;
-
   private handle(rawText: string, final: boolean): void {
-    if (!final) this.lastPartialLength = rawText.length;
-    const expected = this.expected;
-    if (!expected || this.matched) return;
+    const transcript = rawText.trim();
+    if (!transcript || !this.current) return;
 
-    // Judge only what was said after this card appeared.
-    const fresh = rawText.length >= this.partialBase ? rawText.slice(this.partialBase) : rawText;
-    const transcript = fresh.trim();
-    if (!transcript) return;
-
-    const key = `${transcript}:${final}`;
+    const key = `${transcript}:${final}:${this.armed}`;
     if (this.seen.has(key)) return;
     this.seen.add(key);
 
-    const atMs = Math.round(performance.now() - this.shownAt);
-    const verdict = judge(transcript, expected);
-    const hypothesis: Hypothesis = { transcript, atMs, final, verdict };
-    this.events.onHypothesis(hypothesis);
+    const now = performance.now();
+    const hits = (verdict: ReturnType<typeof judge>) =>
+      this.rule === 'exact' ? verdict.exact : verdict.contains;
 
-    if (this.rule === 'exact' ? verdict.exact : verdict.contains) {
-      this.matched = true;
-      this.events.onMatch(hypothesis);
+    if (this.armed && !this.matched) {
+      const verdict = judge(transcript, this.current.expected);
+      const hypothesis: Hypothesis = {
+        transcript,
+        atMs: Math.round(now - this.current.shownAt),
+        final,
+        verdict,
+      };
+
+      if (hits(verdict)) {
+        this.matched = true;
+        this.events.onHypothesis(hypothesis);
+        this.events.onMatch(hypothesis);
+        return;
+      }
+
+      // Not this card's answer — the previous card's, arriving late?
+      if (this.previous) {
+        const lateVerdict = judge(transcript, this.previous.expected);
+        if (hits(lateVerdict)) {
+          const shownAt = this.previous.shownAt;
+          this.previous = null;
+          this.events.onLateMatch({
+            transcript,
+            atMs: Math.round(now - shownAt),
+            final,
+            verdict: lateVerdict,
+          });
+          return;
+        }
+      }
+
+      this.events.onHypothesis(hypothesis);
+      return;
+    }
+
+    // Between cards: this can only be the answer to the one just closed.
+    if (!this.armed) {
+      const verdict = judge(transcript, this.current.expected);
+      if (hits(verdict)) {
+        this.events.onLateMatch({
+          transcript,
+          atMs: Math.round(now - this.current.shownAt),
+          final,
+          verdict,
+        });
+      }
     }
   }
 }

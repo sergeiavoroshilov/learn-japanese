@@ -34,6 +34,8 @@ export function App() {
   const [showRomaji, setShowRomaji] = useState(false);
   const [engine, setEngine] = useState<Engine>('vosk');
   const [grammar, setGrammar] = useState(true);
+  const [flushOnSilence, setFlushOnSilence] = useState(true);
+  const [interCardMs, setInterCardMs] = useState(220);
 
   const [snapshot, setSnapshot] = useState<SessionSnapshot>(IDLE);
   const [micLevel, setMicLevel] = useState(0);
@@ -80,12 +82,24 @@ export function App() {
       rule,
       engine: activeEngine,
       grammar: vocabulary,
+      flushOnSilence,
+      interCardMs,
       onUpdate: setSnapshot,
     });
     sessionRef.current = session;
     setStartedAt(new Date().toISOString());
     void session.start();
-  }, [groups, count, timeoutMs, rule, activeEngine, grammarActive, vocabulary]);
+  }, [
+    groups,
+    count,
+    timeoutMs,
+    rule,
+    activeEngine,
+    grammarActive,
+    vocabulary,
+    flushOnSilence,
+    interCardMs,
+  ]);
 
   const stop = useCallback(() => sessionRef.current?.stop(), []);
 
@@ -250,6 +264,18 @@ export function App() {
               </select>
             </label>
 
+            <label className="field">
+              <span className="label">Пауза между карточками, мс</span>
+              <input
+                type="number"
+                min={0}
+                max={2000}
+                step={20}
+                value={interCardMs}
+                onChange={(e) => setInterCardMs(Number(e.target.value))}
+              />
+            </label>
+
             <label className="field checkbox">
               <input
                 type="checkbox"
@@ -258,6 +284,17 @@ export function App() {
               />
               <span>Показывать ромадзи</span>
             </label>
+
+            {activeEngine !== 'mock' && (
+              <label className="field checkbox">
+                <input
+                  type="checkbox"
+                  checked={flushOnSilence}
+                  onChange={(e) => setFlushOnSilence(e.target.checked)}
+                />
+                <span>Отвечать по тишине, не ждать движок</span>
+              </label>
+            )}
           </div>
 
           <button className="primary" onClick={start} disabled={!supported || groups.length === 0}>
@@ -321,6 +358,15 @@ export function App() {
           </h2>
           <div className="stats">
             <Stat label="Распознано" value={`${stats.matched}/${stats.total}`} hint={`${Math.round(stats.hitRate * 100)}%`} />
+            <Stat
+              label="Поздних ответов"
+              value={String(stats.late)}
+              hint={stats.lateMedian !== null ? `медиана ${ms(stats.lateMedian)}` : undefined}
+            />
+            <Stat
+              label="С учётом поздних"
+              value={`${Math.round(stats.eventualHitRate * 100)}%`}
+            />
             <Stat label="Таймауты" value={String(stats.timeouts)} />
             <Stat label="Точных / по подстроке" value={`${stats.exact} / ${stats.containsOnly}`} />
             <Stat label="Начало речи, медиана" value={ms(stats.onsetMedian)} />
@@ -334,7 +380,9 @@ export function App() {
               ? 'Мок-прогон: задержка движка здесь искусственная, вердикт go/no-go не считается.'
               : stats.asrLagMedian !== null && stats.asrLagMedian <= 500 && stats.hitRate >= 0.9
                 ? 'Похоже на go: движок укладывается в бюджет и почти не промахивается.'
-                : 'Похоже на no-go для варианта A на этих данных — смотрите таблицу: промахи или задержка выше бюджета (500 мс / 90%).'}
+                : stats.eventualHitRate >= 0.9
+                  ? 'Движок узнаёт моры, но не успевает: точность с учётом поздних ответов в норме, проблема в задержке — увеличьте таймаут или проверьте «отвечать по тишине».'
+                  : 'Пока не проходит: промахи или задержка выше бюджета (90% / 500 мс).'}
           </div>
 
           <div className="results-actions">
@@ -363,7 +411,7 @@ export function App() {
                   <td>{statusLabel(o.status)}{o.exact === false ? ' (подстрока)' : ''}</td>
                   <td>{ms(o.onsetMs)}</td>
                   <td>{ms(o.asrLagMs)}</td>
-                  <td>{ms(o.matchMs)}</td>
+                  <td>{ms(o.matchMs ?? o.lateMs)}</td>
                   <td className="cell-hyps">
                     {o.hypotheses.length === 0
                       ? '—'
@@ -397,6 +445,7 @@ function ms(value: number | null): string {
 
 function statusLabel(status: string): string {
   if (status === 'match') return 'ок';
+  if (status === 'late') return 'поздно';
   if (status === 'timeout') return 'таймаут';
   return 'пропуск';
 }

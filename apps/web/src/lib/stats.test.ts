@@ -15,6 +15,7 @@ function outcome(over: Partial<CardOutcome>): CardOutcome {
     status: 'match',
     matchedTranscript: card.glyph,
     exact: true,
+    lateMs: null,
     hypotheses: [],
     ...over,
   };
@@ -92,5 +93,20 @@ describe('summarize', () => {
 
   test('no cards yields a zero hit rate rather than NaN', () => {
     expect(summarize([]).hitRate).toBe(0);
+    expect(summarize([]).eventualHitRate).toBe(0);
+  });
+
+  test('late answers count towards the eventual hit rate, not the timely one', () => {
+    const stats = summarize([
+      outcome({}),
+      outcome({ status: 'late', matchMs: null, asrLagMs: null, lateMs: 2400 }),
+      outcome({ status: 'timeout', matchMs: null, asrLagMs: null, exact: null }),
+      outcome({ status: 'late', matchMs: null, asrLagMs: null, lateMs: 1800 }),
+    ]);
+    expect(stats.matched).toBe(1);
+    expect(stats.late).toBe(2);
+    expect(stats.hitRate).toBe(0.25);
+    expect(stats.eventualHitRate).toBe(0.75);
+    expect(stats.lateMedian).toBe(1800);
   });
 });

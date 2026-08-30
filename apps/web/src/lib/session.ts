@@ -12,7 +12,7 @@ import {
   type RecognizerEvents,
 } from './recognizer';
 
-export type CardStatus = 'match' | 'timeout' | 'skipped';
+export type CardStatus = 'match' | 'late' | 'timeout' | 'skipped';
 
 export interface CardOutcome {
   index: number;
@@ -27,6 +27,12 @@ export interface CardOutcome {
   matchedTranscript: string | null;
   /** Whether the match was exact or only a substring. */
   exact: boolean | null;
+  /**
+   * The engine got this card right, but only after the drill had moved on.
+   * Kept separate from a match: correct-but-too-slow is a latency problem,
+   * not an accuracy one, and the two need different fixes.
+   */
+  lateMs: number | null;
   /** Everything the engine said for this card, in order. */
   hypotheses: Hypothesis[];
 }
@@ -57,6 +63,8 @@ export interface SessionOptions {
   /** Pause between a match and the next card. Keep it short — this is a flow drill. */
   interCardMs?: number;
   engine: Engine;
+  /** Commit the decoder as soon as our VAD hears the answer end. */
+  flushOnSilence?: boolean;
   /** Vocabulary the Vosk decoder is restricted to; null = free recognition. */
   grammar?: string[] | null;
   onUpdate(snapshot: SessionSnapshot): void;
@@ -90,6 +98,7 @@ export class DrillSession {
         this.emit();
       },
       onMatch: (h) => this.finishCard('match', h),
+      onLateMatch: (h) => this.recordLateMatch(h),
       onError: (err) => {
         this.error = err;
         this.emit();
@@ -108,6 +117,12 @@ export class DrillSession {
       this.detector = keyboard;
     } else {
       this.detector = new OnsetDetector();
+      // Our VAD hears the mora end long before Kaldi's sentence-tuned
+      // endpointing does; committing there is the difference between a
+      // ~2 s answer and an instant one.
+      this.detector.onSpeechEnd(() => {
+        if (this.opts.flushOnSilence !== false) this.recognizer.flush?.();
+      });
       this.recognizer =
         opts.engine === 'vosk'
           ? new VoskRecognizer(events, opts.rule, {
@@ -205,6 +220,8 @@ export class DrillSession {
     this.clearTimers();
     this.recognizer.disarm();
     this.detector.disarm();
+    // Never carry one card's audio into the next card's decode.
+    this.recognizer.flush?.();
 
     const matchMs = match?.atMs ?? null;
     const onsetMs = this.liveOnsetMs;
@@ -219,6 +236,7 @@ export class DrillSession {
         status,
         matchedTranscript: match?.transcript ?? null,
         exact: match ? match.verdict.exact : null,
+        lateMs: null,
         hypotheses: this.liveHypotheses,
       },
     ];
@@ -226,6 +244,25 @@ export class DrillSession {
     this.emit();
 
     this.advanceTimer = window.setTimeout(() => this.nextCard(), this.interCardMs);
+  }
+
+  /** The previous card's answer arrived after we gave up on it. */
+  private recordLateMatch(hypothesis: Hypothesis): void {
+    const index = this.outcomes.length - 1;
+    const previous = this.outcomes[index];
+    if (!previous || previous.status === 'match' || previous.status === 'late') return;
+
+    this.outcomes = [
+      ...this.outcomes.slice(0, index),
+      {
+        ...previous,
+        status: 'late',
+        lateMs: hypothesis.atMs,
+        matchedTranscript: hypothesis.transcript,
+        exact: hypothesis.verdict.exact,
+      },
+    ];
+    this.emit();
   }
 
   private clearTimers(): void {

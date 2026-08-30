@@ -15,6 +15,12 @@ export interface RecognizerEvents {
   onHypothesis(h: Hypothesis): void;
   /** First hypothesis that satisfies the current match rule. */
   onMatch(h: Hypothesis): void;
+  /**
+   * The answer to the PREVIOUS card, arriving after it had already been given
+   * up on. Recorded against that card instead of counting as a miss here —
+   * otherwise a slow engine looks like an inaccurate one.
+   */
+  onLateMatch(h: Hypothesis): void;
   onError(error: string): void;
   /** Engine started/stopped listening (Chrome restarts on its own). */
   onListening(listening: boolean): void;
@@ -32,6 +38,12 @@ export interface DrillRecognizer {
   expect(expected: Expected, shownAt: number): void;
   /** Stop matching without tearing the engine down (between cards). */
   disarm(): void;
+  /**
+   * Ask the engine to commit what it has right now. The drill calls this when
+   * its own VAD hears the answer end, rather than waiting for the engine's
+   * endpointing, which is tuned for sentences.
+   */
+  flush?(): void;
   stop(): void;
 }
 
