@@ -31,7 +31,7 @@ export interface OnsetSource {
    * it to tell the decoder "the answer is over, commit now" instead of waiting
    * for the engine's own endpointing.
    */
-  onSpeechEnd(cb: () => void): void;
+  onSpeechEnd(cb: (speechMs: number) => void): void;
   readonly level: number;
   readonly threshold: number;
 }
@@ -66,7 +66,8 @@ export class OnsetDetector implements OnsetSource {
    */
   private awaitingSilence = false;
   private onOnset: ((msSinceArm: number) => void) | null = null;
-  private speechEndListener: (() => void) | null = null;
+  private speechEndListener: ((speechMs: number) => void) | null = null;
+  private speechStartedAt = 0;
 
   private peak = 0;
 
@@ -122,7 +123,7 @@ export class OnsetDetector implements OnsetSource {
     this.awaitingSilence = this.speaking;
   }
 
-  onSpeechEnd(cb: () => void): void {
+  onSpeechEnd(cb: (speechMs: number) => void): void {
     this.speechEndListener = cb;
   }
 
@@ -159,6 +160,7 @@ export class OnsetDetector implements OnsetSource {
       this.aboveCount++;
       if (!this.speaking && this.aboveCount >= this.framesToConfirm) {
         this.speaking = true;
+        this.speechStartedAt = performance.now() - this.framesToConfirm * 20;
         if (this.armedAt !== null && !this.awaitingSilence) {
           const onset = Math.round(performance.now() - this.armedAt);
           const cb = this.onOnset;
@@ -175,7 +177,8 @@ export class OnsetDetector implements OnsetSource {
       if (this.belowCount >= this.framesForSilence) {
         if (this.speaking) {
           this.speaking = false;
-          this.speechEndListener?.();
+          const spokenFor = performance.now() - this.speechStartedAt - this.framesForSilence * 20;
+          this.speechEndListener?.(Math.max(0, Math.round(spokenFor)));
         }
         // Silence reached: a card armed mid-speech may now measure onset.
         this.awaitingSilence = false;

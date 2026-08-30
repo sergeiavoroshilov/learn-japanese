@@ -134,3 +134,4 @@ tr.skipped td { color: var(--muted); }
 .cell-glyph { font-size: 20px; }
 .cell-hyps { font-variant-numeric: normal; color: var(--muted); max-width: 260px; word-break: break-word; }
 .banner.note { background: #16263a; color: #cfe3ff; border: 1px solid #2c4a6b; }
+.witness { display: block; color: var(--accent); }

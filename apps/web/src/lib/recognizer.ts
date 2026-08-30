@@ -21,6 +21,12 @@ export interface RecognizerEvents {
    * otherwise a slow engine looks like an inaccurate one.
    */
   onLateMatch(h: Hypothesis): void;
+  /**
+   * A parallel decoder that decides nothing and only reports what it heard.
+   * In per-card grammar mode it is the check on false accepts: a decoder that
+   * knows a single word can force any sound into it.
+   */
+  onWitness?(transcript: string): void;
   onError(error: string): void;
   /** Engine started/stopped listening (Chrome restarts on its own). */
   onListening(listening: boolean): void;

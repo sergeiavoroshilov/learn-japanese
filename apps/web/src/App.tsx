@@ -3,7 +3,7 @@ import { GROUP_LABELS, KANA_GROUPS, drawCards, type KanaGroup } from './lib/kana
 import { isWebSpeechSupported, type MatchRule } from './lib/recognizer';
 import { DrillSession, type Engine, type SessionSnapshot } from './lib/session';
 import { buildReport, summarize } from './lib/stats';
-import { VOSK_OOV_KANA } from './lib/vosk';
+import { VOSK_OOV_KANA, type GrammarMode } from './lib/vosk';
 
 const ENGINE_LABELS: Record<Engine, string> = {
   vosk: 'Vosk в браузере (локально)',
@@ -33,8 +33,9 @@ export function App() {
   const [rule, setRule] = useState<MatchRule>('exact');
   const [showRomaji, setShowRomaji] = useState(false);
   const [engine, setEngine] = useState<Engine>('vosk');
-  const [grammar, setGrammar] = useState(true);
+  const [grammarMode, setGrammarMode] = useState<GrammarMode>('card');
   const [flushOnSilence, setFlushOnSilence] = useState(true);
+  const [witness, setWitness] = useState(true);
   const [interCardMs, setInterCardMs] = useState(220);
 
   const [snapshot, setSnapshot] = useState<SessionSnapshot>(IDLE);
@@ -58,7 +59,7 @@ export function App() {
    * both the vocabulary and the deck — a card the decoder cannot output would
    * otherwise look like a recognition failure.
    */
-  const grammarActive = activeEngine === 'vosk' && grammar;
+  const grammarActive = activeEngine === 'vosk' && grammarMode !== 'none';
   const vocabulary = useMemo(
     () =>
       grammarActive
@@ -81,7 +82,9 @@ export function App() {
       timeoutMs,
       rule,
       engine: activeEngine,
-      grammar: vocabulary,
+      grammarMode: activeEngine === 'vosk' ? grammarMode : undefined,
+      deckVocabulary: vocabulary ?? [],
+      witness: grammarMode === 'card' && witness,
       flushOnSilence,
       interCardMs,
       onUpdate: setSnapshot,
@@ -95,9 +98,11 @@ export function App() {
     timeoutMs,
     rule,
     activeEngine,
+    grammarMode,
     grammarActive,
     vocabulary,
     flushOnSilence,
+    witness,
     interCardMs,
   ]);
 
@@ -130,12 +135,22 @@ export function App() {
     const report = buildReport(snapshot.outcomes, {
       recognizer: snapshot.recognizerName,
       rule,
-      grammarSize: vocabulary?.length ?? null,
+      grammarMode,
+      grammarSize:
+        grammarMode === 'card' ? 1 : grammarMode === 'deck' ? (vocabulary?.length ?? null) : null,
       timeoutMs,
       startedAt,
     });
     await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
-  }, [snapshot.outcomes, snapshot.recognizerName, rule, vocabulary, timeoutMs, startedAt]);
+  }, [
+    snapshot.outcomes,
+    snapshot.recognizerName,
+    rule,
+    grammarMode,
+    vocabulary,
+    timeoutMs,
+    startedAt,
+  ]);
 
   const toggleGroup = (g: KanaGroup) =>
     setGroups((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
@@ -160,9 +175,11 @@ export function App() {
       )}
       {activeEngine === 'vosk' && !mock && (
         <div className="banner note">
-          {grammar
-            ? `Декодер выбирает только из ${vocabulary?.length ?? 0} мор — подставить «部屋» вместо へ ему неоткуда. Карточки ${VOSK_OOV_KANA.join(', ')} исключены: их нет в словаре модели.`
-            : 'Свободное распознавание — режим для сравнения: видно, что даёт локальная модель без ограничения словаря.'}
+          {grammarMode === 'card'
+            ? 'Декодер знает одно слово — ожидаемую мору. Вопрос сводится к «это она или нет», и близкие пары (く/こ, む/も) перестают конкурировать. Обратная сторона: проверьте, не засчитывает ли он заведомо неверный ответ.'
+            : grammarMode === 'deck'
+              ? `Декодер выбирает из ${vocabulary?.length ?? 0} мор — подставить «部屋» вместо へ ему неоткуда, но перепутать く с こ он всё ещё может. Карточки ${VOSK_OOV_KANA.join(', ')} исключены: их нет в словаре модели.`
+              : 'Свободное распознавание — контрольная группа: видно, что даёт та же модель без ограничения словаря.'}
         </div>
       )}
       {!supported && (
@@ -218,16 +235,16 @@ export function App() {
             </label>
 
             {activeEngine === 'vosk' && (
-              <label className="field checkbox">
-                <input
-                  type="checkbox"
-                  checked={grammar}
-                  onChange={(e) => setGrammar(e.target.checked)}
-                />
-                <span>
-                  Ограничить словарь
-                  {vocabulary ? ` (${vocabulary.length} мор)` : ''}
-                </span>
+              <label className="field">
+                <span className="label">Словарь декодера</span>
+                <select
+                  value={grammarMode}
+                  onChange={(e) => setGrammarMode(e.target.value as GrammarMode)}
+                >
+                  <option value="card">Только ожидаемая мора</option>
+                  <option value="deck">Вся колода ({vocabulary?.length ?? 0} мор)</option>
+                  <option value="none">Без ограничения</option>
+                </select>
               </label>
             )}
           </div>
@@ -293,6 +310,17 @@ export function App() {
                   onChange={(e) => setFlushOnSilence(e.target.checked)}
                 />
                 <span>Отвечать по тишине, не ждать движок</span>
+              </label>
+            )}
+
+            {activeEngine === 'vosk' && grammarMode === 'card' && (
+              <label className="field checkbox">
+                <input
+                  type="checkbox"
+                  checked={witness}
+                  onChange={(e) => setWitness(e.target.checked)}
+                />
+                <span>Контрольный декодер (вся колода)</span>
               </label>
             )}
           </div>
@@ -418,6 +446,9 @@ export function App() {
                       : o.hypotheses
                           .map((h) => `${h.transcript}${h.final ? '*' : ''} @${h.atMs}`)
                           .join(' · ')}
+                    {o.witnessHeard.length > 0 && (
+                      <span className="witness"> контроль: {o.witnessHeard.join(' ')}</span>
+                    )}
                   </td>
                 </tr>
               ))}

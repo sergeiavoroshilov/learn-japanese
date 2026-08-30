@@ -24,13 +24,24 @@ export const VOSK_MODEL_URL = '/models/vosk-model-small-ja-0.22.tar.gz';
  */
 export const VOSK_OOV_KANA = ['びゃ', 'ぴゃ', 'ぴょ'];
 
+/**
+ * How tightly the decoder is constrained.
+ *
+ * - `deck` — every mora in the session (46 for basic kana). The decoder cannot
+ *   answer «部屋» to へ, but it can still confuse く with こ.
+ * - `card` — only the expected mora plus `[unk]`. The question becomes
+ *   "did you say this, yes or no?", which is what the drill actually asks.
+ *   Minimal pairs stop competing; the risk moves to false accepts.
+ * - `none` — free recognition, the control group.
+ */
+export type GrammarMode = 'deck' | 'card' | 'none';
+
 export interface VoskOptions {
-  /**
-   * Vocabulary the decoder is restricted to. This is the point of the spike:
-   * with 46 moras to choose from, the decoder cannot answer «部屋» to へ.
-   * `null` runs free recognition, for comparison.
-   */
-  grammar: string[] | null;
+  mode: GrammarMode;
+  /** Every mora of the session; used by `deck` mode. */
+  deckVocabulary: string[];
+  /** Run a deck-wide decoder alongside `card` mode, purely to log its opinion. */
+  witness?: boolean;
   onStatus?(text: string): void;
 }
 
@@ -58,18 +69,25 @@ export class VoskRecognizer implements DrillRecognizer {
   private matched = false;
   private seen = new Set<string>();
 
+  private mic: MicSource | null = null;
+  private witness: KaldiRecognizer | null = null;
+
   constructor(
     private readonly events: RecognizerEvents,
     private readonly rule: MatchRule,
     private readonly opts: VoskOptions,
   ) {
-    this.name = opts.grammar
-      ? `Vosk (словарь из ${opts.grammar.length} мор)`
-      : 'Vosk (свободное распознавание)';
+    this.name =
+      opts.mode === 'card'
+        ? 'Vosk (словарь из одной ожидаемой моры)'
+        : opts.mode === 'deck'
+          ? `Vosk (словарь из ${opts.deckVocabulary.length} мор)`
+          : 'Vosk (свободное распознавание)';
   }
 
   async start(mic: MicSource | null): Promise<void> {
     if (!mic) throw new Error('Vosk требует микрофон');
+    this.mic = mic;
 
     // A missing model file otherwise surfaces as an opaque worker failure.
     const head = await fetch(VOSK_MODEL_URL, { method: 'HEAD' });
@@ -83,12 +101,50 @@ export class VoskRecognizer implements DrillRecognizer {
     this.model = await vosk.createModel(VOSK_MODEL_URL);
 
     this.opts.onStatus?.('готовлю распознаватель…');
-    const grammar = this.opts.grammar
-      ? // "[unk]" gives the decoder somewhere to put anything that is not a
-        // listed mora, instead of forcing a wrong one.
-        JSON.stringify([...this.opts.grammar, '[unk]'])
-      : undefined;
-    const recognizer = new this.model.KaldiRecognizer(mic.sampleRate, grammar);
+    if (this.opts.mode !== 'card') {
+      this.recognizer = this.spawn(
+        this.opts.mode === 'deck' ? this.opts.deckVocabulary : null,
+      );
+    } else if (this.opts.witness && this.opts.deckVocabulary.length > 0) {
+      this.witness = this.spawnWitness(this.opts.deckVocabulary);
+    }
+
+    // Audio is routed to whichever recognizer is current: in per-card mode a
+    // fresh one is built for every card.
+    mic.onChunk((chunk, sampleRate) => {
+      this.recognizer?.acceptWaveformFloat(chunk, sampleRate);
+      this.witness?.acceptWaveformFloat(chunk, sampleRate);
+    });
+
+    this.opts.onStatus?.('');
+    this.events.onListening(true);
+  }
+
+  /** Deck-wide decoder whose output is recorded but never matched against. */
+  private spawnWitness(words: string[]): KaldiRecognizer | null {
+    const model = this.model;
+    const mic = this.mic;
+    if (!model || !mic) return null;
+    const recognizer = new model.KaldiRecognizer(mic.sampleRate, JSON.stringify([...words, '[unk]']));
+    recognizer.on('result', (message) => {
+      if ('result' in message && 'text' in message.result) {
+        const text = message.result.text.trim();
+        if (text) this.events.onWitness?.(text);
+      }
+    });
+    return recognizer;
+  }
+
+  /** Builds a recognizer whose vocabulary is `words`, or unrestricted if null. */
+  private spawn(words: string[] | null): KaldiRecognizer | null {
+    const model = this.model;
+    const mic = this.mic;
+    if (!model || !mic) return null;
+
+    // "[unk]" gives the decoder somewhere to put anything that is not a listed
+    // mora, instead of forcing a wrong one.
+    const grammar = words ? JSON.stringify([...words, '[unk]']) : undefined;
+    const recognizer = new model.KaldiRecognizer(mic.sampleRate, grammar);
 
     recognizer.on('partialresult', (message) => {
       if ('result' in message && 'partial' in message.result) {
@@ -103,12 +159,7 @@ export class VoskRecognizer implements DrillRecognizer {
     recognizer.on('error', (message) => {
       if ('error' in message) this.events.onError(message.error);
     });
-
-    this.recognizer = recognizer;
-    mic.onChunk((chunk, sampleRate) => recognizer.acceptWaveformFloat(chunk, sampleRate));
-
-    this.opts.onStatus?.('');
-    this.events.onListening(true);
+    return recognizer;
   }
 
   expect(expected: Expected, shownAt: number): void {
@@ -117,6 +168,13 @@ export class VoskRecognizer implements DrillRecognizer {
     this.armed = true;
     this.matched = false;
     this.seen.clear();
+
+    if (this.opts.mode === 'card') {
+      // accept[0] is the kana itself — the only form the model has as a word.
+      const previous = this.recognizer;
+      this.recognizer = this.spawn([expected.accept[0]]);
+      previous?.remove();
+    }
   }
 
   /**
@@ -127,6 +185,7 @@ export class VoskRecognizer implements DrillRecognizer {
    */
   flush(): void {
     this.recognizer?.retrieveFinalResult();
+    this.witness?.retrieveFinalResult();
   }
 
   disarm(): void {
@@ -136,6 +195,8 @@ export class VoskRecognizer implements DrillRecognizer {
   }
 
   stop(): void {
+    this.witness?.remove();
+    this.witness = null;
     this.armed = false;
     this.current = null;
     this.previous = null;

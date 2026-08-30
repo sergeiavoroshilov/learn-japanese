@@ -68,6 +68,8 @@ export function summarize(outcomes: CardOutcome[]): SessionStats {
 export interface RunReport {
   recognizer: string;
   rule: string;
+  /** How the decoder was constrained: deck-wide, per card, or not at all. */
+  grammarMode: string;
   /** Size of the restricted vocabulary, or null for free recognition. */
   grammarSize: number | null;
   timeoutMs: number;
@@ -79,11 +81,13 @@ export interface RunReport {
     romaji: string;
     status: string;
     onsetMs: number | null;
+    speechMs: number | null;
     matchMs: number | null;
     asrLagMs: number | null;
     exact: boolean | null;
     lateMs: number | null;
     matchedTranscript: string | null;
+    witnessHeard: string[];
     hypotheses: { transcript: string; atMs: number; final: boolean; matched: boolean }[];
   }[];
 }
@@ -93,6 +97,7 @@ export function buildReport(
   meta: {
     recognizer: string;
     rule: string;
+    grammarMode: string;
     grammarSize: number | null;
     timeoutMs: number;
     startedAt: string;
@@ -107,11 +112,13 @@ export function buildReport(
       romaji: o.card.romaji,
       status: o.status,
       onsetMs: o.onsetMs,
+      speechMs: o.speechMs,
       matchMs: o.matchMs,
       asrLagMs: o.asrLagMs,
       exact: o.exact,
       lateMs: o.lateMs,
       matchedTranscript: o.matchedTranscript,
+      witnessHeard: o.witnessHeard,
       hypotheses: o.hypotheses.map((h) => ({
         transcript: h.transcript,
         atMs: h.atMs,
