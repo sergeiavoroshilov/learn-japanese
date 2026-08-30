@@ -1,7 +1,9 @@
+import { MicSource } from './audio';
 import type { KanaCard } from './kana';
 import { KeyboardSource } from './keyboard';
 import { expectedFor } from './match';
 import { OnsetDetector, type OnsetSource } from './onset';
+import { VoskRecognizer } from './vosk';
 import {
   WebSpeechRecognizer,
   type DrillRecognizer,
@@ -29,8 +31,12 @@ export interface CardOutcome {
   hypotheses: Hypothesis[];
 }
 
+export type Engine = 'webspeech' | 'vosk' | 'mock';
+
 export interface SessionSnapshot {
   status: 'idle' | 'starting' | 'running' | 'done' | 'error';
+  /** What a slow start is currently doing (model download, warm-up). */
+  statusText: string;
   cardIndex: number;
   totalCards: number;
   current: KanaCard | null;
@@ -50,8 +56,9 @@ export interface SessionOptions {
   rule: MatchRule;
   /** Pause between a match and the next card. Keep it short — this is a flow drill. */
   interCardMs?: number;
-  /** Answer from the keyboard instead of the mic (`?mock=1`). */
-  mock?: boolean;
+  engine: Engine;
+  /** Vocabulary the Vosk decoder is restricted to; null = free recognition. */
+  grammar?: string[] | null;
   onUpdate(snapshot: SessionSnapshot): void;
 }
 
@@ -59,7 +66,9 @@ export class DrillSession {
   private recognizer: DrillRecognizer;
   private detector: OnsetSource;
 
+  private mic: MicSource | null = null;
   private status: SessionSnapshot['status'] = 'idle';
+  private statusText = '';
   private cardIndex = -1;
   private outcomes: CardOutcome[] = [];
   private liveHypotheses: Hypothesis[] = [];
@@ -91,15 +100,24 @@ export class DrillSession {
       },
     };
 
-    if (opts.mock) {
+    if (opts.engine === 'mock') {
       // One object plays both roles: the keystroke is both the answer and the
       // onset, so no microphone is involved.
       const keyboard = new KeyboardSource(events, opts.rule);
       this.recognizer = keyboard;
       this.detector = keyboard;
     } else {
-      this.recognizer = new WebSpeechRecognizer(events, opts.rule);
       this.detector = new OnsetDetector();
+      this.recognizer =
+        opts.engine === 'vosk'
+          ? new VoskRecognizer(events, opts.rule, {
+              grammar: opts.grammar ?? null,
+              onStatus: (text) => {
+                this.statusText = text;
+                this.emit();
+              },
+            })
+          : new WebSpeechRecognizer(events, opts.rule);
     }
   }
 
@@ -115,8 +133,13 @@ export class DrillSession {
     this.status = 'starting';
     this.emit();
     try {
-      await this.detector.start();
-      await this.recognizer.start();
+      if (this.opts.engine !== 'mock') {
+        this.mic = new MicSource();
+        // Vosk models are trained at 16 kHz; asking for it avoids resampling.
+        await this.mic.start(this.opts.engine === 'vosk' ? 16000 : undefined);
+      }
+      await this.detector.start(this.mic);
+      await this.recognizer.start(this.mic);
     } catch (err) {
       this.status = 'error';
       this.error = err instanceof Error ? err.message : String(err);
@@ -139,6 +162,8 @@ export class DrillSession {
     this.clearTimers();
     this.recognizer.stop();
     this.detector.stop();
+    this.mic?.stop();
+    this.mic = null;
     if (this.status === 'running' || this.status === 'starting') {
       this.status = this.outcomes.length > 0 ? 'done' : 'idle';
     }
@@ -152,6 +177,8 @@ export class DrillSession {
       this.status = 'done';
       this.recognizer.stop();
       this.detector.stop();
+      this.mic?.stop();
+      this.mic = null;
       this.emit();
       return;
     }
@@ -211,6 +238,7 @@ export class DrillSession {
   private emit(): void {
     this.opts.onUpdate({
       status: this.status,
+      statusText: this.statusText,
       cardIndex: this.cardIndex,
       totalCards: this.opts.cards.length,
       current: this.opts.cards[this.cardIndex] ?? null,

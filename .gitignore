@@ -5,3 +5,6 @@ dist
 .env
 .env.*
 !.env.example
+
+# модель Vosk (48 МБ) — качается скриптом scripts/fetch-vosk-model.sh
+apps/web/public/models/

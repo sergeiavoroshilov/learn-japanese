@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { GROUP_LABELS, drawCards, type KanaGroup } from './lib/kana';
+import { GROUP_LABELS, KANA_GROUPS, drawCards, type KanaGroup } from './lib/kana';
 import { isWebSpeechSupported, type MatchRule } from './lib/recognizer';
-import { DrillSession, type SessionSnapshot } from './lib/session';
+import { DrillSession, type Engine, type SessionSnapshot } from './lib/session';
 import { buildReport, summarize } from './lib/stats';
+import { VOSK_OOV_KANA } from './lib/vosk';
+
+const ENGINE_LABELS: Record<Engine, string> = {
+  vosk: 'Vosk в браузере (локально)',
+  webspeech: 'Web Speech API (отклонён спайком №1)',
+  mock: 'Клавиатура (мок)',
+};
 
 const IDLE: SessionSnapshot = {
   status: 'idle',
+  statusText: '',
   cardIndex: -1,
   totalCards: 0,
   current: null,
@@ -22,8 +30,10 @@ export function App() {
   const [groups, setGroups] = useState<KanaGroup[]>(['basic']);
   const [count, setCount] = useState(20);
   const [timeoutMs, setTimeoutMs] = useState(6000);
-  const [rule, setRule] = useState<MatchRule>('contains');
+  const [rule, setRule] = useState<MatchRule>('exact');
   const [showRomaji, setShowRomaji] = useState(false);
+  const [engine, setEngine] = useState<Engine>('vosk');
+  const [grammar, setGrammar] = useState(true);
 
   const [snapshot, setSnapshot] = useState<SessionSnapshot>(IDLE);
   const [micLevel, setMicLevel] = useState(0);
@@ -32,19 +42,50 @@ export function App() {
   const sessionRef = useRef<DrillSession | null>(null);
 
   const mock = useMemo(() => new URLSearchParams(window.location.search).has('mock'), []);
-  const supported = useMemo(() => mock || isWebSpeechSupported(), [mock]);
-  const secure = window.isSecureContext || mock;
+  const activeEngine: Engine = mock ? 'mock' : engine;
+  const supported = useMemo(
+    () => activeEngine !== 'webspeech' || isWebSpeechSupported(),
+    [activeEngine],
+  );
+  const secure = window.isSecureContext || activeEngine === 'mock';
   const running = snapshot.status === 'running' || snapshot.status === 'starting';
 
+  /**
+   * The restricted vocabulary handed to Vosk: every mora in the selected decks.
+   * Three rare youon are not in the model's lexicon, so they are dropped from
+   * both the vocabulary and the deck — a card the decoder cannot output would
+   * otherwise look like a recognition failure.
+   */
+  const grammarActive = activeEngine === 'vosk' && grammar;
+  const vocabulary = useMemo(
+    () =>
+      grammarActive
+        ? groups
+            .flatMap((g) => KANA_GROUPS[g])
+            .map((c) => c.kana)
+            .filter((kana) => !VOSK_OOV_KANA.includes(kana))
+        : null,
+    [grammarActive, groups],
+  );
+
   const start = useCallback(() => {
-    const cards = drawCards(groups, count);
-    if (cards.length === 0) return;
+    const deck = drawCards(groups, count).filter(
+      (card) => !grammarActive || !VOSK_OOV_KANA.includes(card.kana),
+    );
+    if (deck.length === 0) return;
     sessionRef.current?.stop();
-    const session = new DrillSession({ cards, timeoutMs, rule, mock, onUpdate: setSnapshot });
+    const session = new DrillSession({
+      cards: deck,
+      timeoutMs,
+      rule,
+      engine: activeEngine,
+      grammar: vocabulary,
+      onUpdate: setSnapshot,
+    });
     sessionRef.current = session;
     setStartedAt(new Date().toISOString());
     void session.start();
-  }, [groups, count, timeoutMs, rule, mock]);
+  }, [groups, count, timeoutMs, rule, activeEngine, grammarActive, vocabulary]);
 
   const stop = useCallback(() => sessionRef.current?.stop(), []);
 
@@ -75,11 +116,12 @@ export function App() {
     const report = buildReport(snapshot.outcomes, {
       recognizer: snapshot.recognizerName,
       rule,
+      grammarSize: vocabulary?.length ?? null,
       timeoutMs,
       startedAt,
     });
     await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
-  }, [snapshot.outcomes, snapshot.recognizerName, rule, timeoutMs, startedAt]);
+  }, [snapshot.outcomes, snapshot.recognizerName, rule, vocabulary, timeoutMs, startedAt]);
 
   const toggleGroup = (g: KanaGroup) =>
     setGroups((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
@@ -100,6 +142,13 @@ export function App() {
           Мок-режим: отвечайте с клавиатуры (ромадзи), микрофон не нужен.
           Задержка движка здесь нулевая по построению — на вопрос go/no-go
           такой прогон не отвечает, он только проверяет сам цикл дрилла.
+        </div>
+      )}
+      {activeEngine === 'vosk' && !mock && (
+        <div className="banner note">
+          {grammar
+            ? `Декодер выбирает только из ${vocabulary?.length ?? 0} мор — подставить «部屋» вместо へ ему неоткуда. Карточки ${VOSK_OOV_KANA.join(', ')} исключены: их нет в словаре модели.`
+            : 'Свободное распознавание — режим для сравнения: видно, что даёт локальная модель без ограничения словаря.'}
         </div>
       )}
       {!supported && (
@@ -133,6 +182,40 @@ export function App() {
                 </label>
               ))}
             </div>
+          </div>
+
+          <div className="row">
+            <label className="field">
+              <span className="label">Движок</span>
+              <select
+                value={activeEngine}
+                disabled={mock}
+                onChange={(e) => setEngine(e.target.value as Engine)}
+              >
+                {mock ? (
+                  <option value="mock">{ENGINE_LABELS.mock}</option>
+                ) : (
+                  <>
+                    <option value="vosk">{ENGINE_LABELS.vosk}</option>
+                    <option value="webspeech">{ENGINE_LABELS.webspeech}</option>
+                  </>
+                )}
+              </select>
+            </label>
+
+            {activeEngine === 'vosk' && (
+              <label className="field checkbox">
+                <input
+                  type="checkbox"
+                  checked={grammar}
+                  onChange={(e) => setGrammar(e.target.checked)}
+                />
+                <span>
+                  Ограничить словарь
+                  {vocabulary ? ` (${vocabulary.length} мор)` : ''}
+                </span>
+              </label>
+            )}
           </div>
 
           <div className="row">
@@ -181,6 +264,10 @@ export function App() {
             {snapshot.outcomes.length > 0 ? 'Ещё сессия' : 'Начать сессию'}
           </button>
         </section>
+      )}
+
+      {snapshot.status === 'starting' && snapshot.statusText && (
+        <div className="banner note">{snapshot.statusText}</div>
       )}
 
       {running && (
@@ -243,7 +330,7 @@ export function App() {
           </div>
 
           <div className="verdict">
-            {mock
+            {activeEngine === 'mock'
               ? 'Мок-прогон: задержка движка здесь искусственная, вердикт go/no-go не считается.'
               : stats.asrLagMedian !== null && stats.asrLagMedian <= 500 && stats.hitRate >= 0.9
                 ? 'Похоже на go: движок укладывается в бюджет и почти не промахивается.'

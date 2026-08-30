@@ -31,7 +31,7 @@ export class KeyboardSource implements DrillRecognizer, OnsetSource {
     private readonly rule: MatchRule,
   ) {}
 
-  async start(): Promise<void> {
+  async start(_mic?: unknown): Promise<void> {
     window.addEventListener('keydown', this.listener);
     this.events.onListening(true);
   }

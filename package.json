@@ -10,7 +10,8 @@
     "dev:https": "bun --filter web dev:https",
     "build": "bun --filter web build",
     "typecheck": "bun --filter web typecheck",
-    "test": "bun test"
+    "test": "bun test",
+    "fetch:model": "./scripts/fetch-vosk-model.sh"
   },
   "devDependencies": {
     "@types/bun": "^1.4.0"

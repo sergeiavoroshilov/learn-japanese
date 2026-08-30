@@ -1,3 +1,5 @@
+import type { MicSource } from './audio';
+
 /**
  * Energy-based speech-onset detector.
  *
@@ -19,7 +21,7 @@
  * run without a microphone.
  */
 export interface OnsetSource {
-  start(): Promise<void>;
+  start(mic: MicSource | null): Promise<void>;
   stop(): void;
   /** Arm for a new card; the callback fires once, with ms since arming. */
   arm(onOnset: (msSinceArm: number) => void): void;
@@ -38,8 +40,6 @@ export interface OnsetDetectorOptions {
 }
 
 export class OnsetDetector implements OnsetSource {
-  private ctx: AudioContext | null = null;
-  private stream: MediaStream | null = null;
   private analyser: AnalyserNode | null = null;
   private buffer: Float32Array<ArrayBuffer> = new Float32Array(0);
   private timer: number | null = null;
@@ -64,17 +64,9 @@ export class OnsetDetector implements OnsetSource {
     this.minThreshold = opts.minThreshold ?? 0.015;
   }
 
-  /** Requests the mic and starts measuring the room's noise floor. */
-  async start(): Promise<void> {
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
-    this.ctx = new AudioContext();
-    const source = this.ctx.createMediaStreamSource(this.stream);
-    const analyser = this.ctx.createAnalyser();
-    analyser.fftSize = 1024;
-    analyser.smoothingTimeConstant = 0;
-    source.connect(analyser);
+  /** Attaches to an already-open mic and starts measuring the noise floor. */
+  async start(mic: MicSource): Promise<void> {
+    const analyser = mic.createAnalyser();
     this.analyser = analyser;
     this.buffer = new Float32Array(analyser.fftSize);
 
@@ -117,11 +109,8 @@ export class OnsetDetector implements OnsetSource {
     if (this.timer !== null) window.clearInterval(this.timer);
     this.timer = null;
     this.disarm();
+    this.analyser?.disconnect();
     this.analyser = null;
-    this.stream?.getTracks().forEach((t) => t.stop());
-    this.stream = null;
-    void this.ctx?.close();
-    this.ctx = null;
   }
 
   private tick(): void {

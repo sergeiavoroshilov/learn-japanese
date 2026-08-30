@@ -1,3 +1,4 @@
+import type { MicSource } from './audio';
 import { judge, type Expected, type MatchVerdict } from './match';
 
 export interface Hypothesis {
@@ -25,7 +26,8 @@ export interface RecognizerEvents {
  */
 export interface DrillRecognizer {
   readonly name: string;
-  start(): Promise<void>;
+  /** @param mic shared capture; null when the engine needs no audio (mock). */
+  start(mic: MicSource | null): Promise<void>;
   /** Arm for a new card; resets the "already matched" latch. */
   expect(expected: Expected, shownAt: number): void;
   /** Stop matching without tearing the engine down (between cards). */
@@ -65,7 +67,7 @@ export class WebSpeechRecognizer implements DrillRecognizer {
     private readonly lang = 'ja-JP',
   ) {}
 
-  async start(): Promise<void> {
+  async start(_mic: MicSource | null): Promise<void> {
     const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!Ctor) throw new Error('Web Speech API недоступен в этом браузере');
 

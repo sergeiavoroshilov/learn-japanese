@@ -53,6 +53,8 @@ export function summarize(outcomes: CardOutcome[]): SessionStats {
 export interface RunReport {
   recognizer: string;
   rule: string;
+  /** Size of the restricted vocabulary, or null for free recognition. */
+  grammarSize: number | null;
   timeoutMs: number;
   userAgent: string;
   startedAt: string;
@@ -72,7 +74,13 @@ export interface RunReport {
 
 export function buildReport(
   outcomes: CardOutcome[],
-  meta: { recognizer: string; rule: string; timeoutMs: number; startedAt: string },
+  meta: {
+    recognizer: string;
+    rule: string;
+    grammarSize: number | null;
+    timeoutMs: number;
+    startedAt: string;
+  },
 ): RunReport {
   return {
     ...meta,
