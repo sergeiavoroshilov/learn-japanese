@@ -16,13 +16,11 @@ const vosk = ((voskModule as { default?: typeof voskModule }).default ??
 export const VOSK_MODEL_URL = '/models/vosk-model-small-ja-0.22.tar.gz';
 
 /**
- * Moras absent from vosk-model-small-ja-0.22's lexicon (checked against
- * graph/words.txt: 46/46 basic and 25/25 dakuten are present, these three are
- * not). A grammar may only list words the model knows, so cards for these are
- * dropped from a grammar-restricted session rather than left silently
- * unmatchable.
+ * Moras absent from vosk-model-small-ja-0.22's lexicon, checked against
+ * graph/words.txt: 46/46 basic and 25/25 dakuten are present, three youon are
+ * not. The list itself lives with the kana table, where the cards are.
  */
-export const VOSK_OOV_KANA = ['びゃ', 'ぴゃ', 'ぴょ'];
+export { VOICE_OOV_KANA as VOSK_OOV_KANA } from './kana';
 
 /** How long after a card appears a bare «[unk]» is still the previous card's tail. */
 const TAIL_WINDOW_MS = 300;

@@ -136,3 +136,27 @@ tr.skipped td { color: var(--muted); }
 .banner.note { background: #16263a; color: #cfe3ff; border: 1px solid #2c4a6b; }
 .witness { display: block; color: var(--accent); }
 .retry { color: var(--warn); font-size: 14px; }
+
+/* trainer */
+.loading { color: var(--muted); padding: 32px 0; }
+.note-inline { color: var(--muted); font-size: 13px; margin: 10px 0 0; max-width: 70ch; }
+
+.answer { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.answer-romaji { font-size: 26px; letter-spacing: 0.08em; color: var(--warn); }
+.answer-why { color: var(--muted); font-size: 13px; }
+
+.slow-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.slow {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: var(--panel-2); border: 1px solid #303851;
+  border-radius: 10px; padding: 8px 14px; min-width: 72px;
+}
+.slow-bad { border-color: var(--warn); }
+.slow-glyph { font-size: 26px; line-height: 1.1; }
+.slow-romaji { color: var(--muted); font-size: 12px; }
+.slow-ms { font-size: 13px; font-variant-numeric: tabular-nums; }
+
+.panel > .primary { margin-top: 14px; }
+.stage .live { align-items: center; min-height: 40px; }
+.foot { color: var(--muted); font-size: 13px; max-width: 70ch; }
+.foot a { color: var(--accent); }

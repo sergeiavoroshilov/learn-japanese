@@ -54,6 +54,8 @@ export interface SessionSnapshot {
   statusText: string;
   cardIndex: number;
   totalCards: number;
+  /** Cards still queued behind this one, including repeats. */
+  remaining: number;
   current: KanaCard | null;
   /** Set briefly after a match so the UI can flash green. */
   lastStatus: CardStatus | null;
@@ -71,6 +73,12 @@ export interface SessionOptions {
   rule: MatchRule;
   /** Pause between a match and the next card. Keep it short — this is a flow drill. */
   interCardMs?: number;
+  /**
+   * Pause after a card that was not answered. Longer than interCardMs on
+   * purpose: this is the moment the correct reading is shown, and reading it
+   * is the only chance to learn from the miss.
+   */
+  reviewPauseMs?: number;
   engine: Engine;
   /** Commit the decoder as soon as our VAD hears the answer end. */
   flushOnSilence?: boolean;
@@ -90,6 +98,8 @@ export interface SessionOptions {
   /** Let that decoder accept answers too, not just log them. */
   acceptFromWitness?: boolean;
   onUpdate(snapshot: SessionSnapshot): void;
+  /** Called once per finished card, before the next one appears. */
+  onOutcome?(outcome: CardOutcome): void;
 }
 
 export class DrillSession {
@@ -97,6 +107,8 @@ export class DrillSession {
   private detector: OnsetSource;
 
   private mic: MicSource | null = null;
+  /** Mutable: a missed card is pushed back into it, so it can outgrow the plan. */
+  private queue: KanaCard[];
   private status: SessionSnapshot['status'] = 'idle';
   private statusText = '';
   private cardIndex = -1;
@@ -114,10 +126,13 @@ export class DrillSession {
   private advanceTimer: number | null = null;
   private flushTimer: number | null = null;
   private readonly interCardMs: number;
+  private readonly reviewPauseMs: number;
   private readonly flushDelayMs: number;
 
   constructor(private readonly opts: SessionOptions) {
+    this.queue = [...opts.cards];
     this.interCardMs = opts.interCardMs ?? 220;
+    this.reviewPauseMs = opts.reviewPauseMs ?? 1400;
     this.flushDelayMs = opts.flushDelayMs ?? 250;
     const events: RecognizerEvents = {
       onHypothesis: (h) => {
@@ -228,9 +243,20 @@ export class DrillSession {
     this.emit();
   }
 
+  /**
+   * Show this card again later in the same session. A mora that was missed is
+   * worth another try within the minute; FSRS only decides which *day* a card
+   * comes back, so without this a miss would simply be lost until tomorrow.
+   */
+  requeue(card: KanaCard, gap = 3): void {
+    const at = Math.min(this.queue.length, this.cardIndex + 1 + gap);
+    this.queue = [...this.queue.slice(0, at), card, ...this.queue.slice(at)];
+    this.emit();
+  }
+
   private nextCard(): void {
     this.cardIndex++;
-    const card = this.opts.cards[this.cardIndex];
+    const card = this.queue[this.cardIndex];
     if (!card) {
       this.status = 'done';
       this.recognizer.stop();
@@ -259,7 +285,7 @@ export class DrillSession {
   }
 
   private finishCard(status: CardStatus, match: Hypothesis | null): void {
-    const card = this.opts.cards[this.cardIndex];
+    const card = this.queue[this.cardIndex];
     if (!card || this.status !== 'running') return;
 
     this.clearTimers();
@@ -290,8 +316,12 @@ export class DrillSession {
     ];
     this.lastStatus = status;
     this.emit();
+    this.opts.onOutcome?.(this.outcomes[this.outcomes.length - 1]!);
 
-    this.advanceTimer = window.setTimeout(() => this.nextCard(), this.interCardMs);
+    this.advanceTimer = window.setTimeout(
+      () => this.nextCard(),
+      status === 'match' ? this.interCardMs : this.reviewPauseMs,
+    );
   }
 
   /** Speech ended after its card had already closed on a match. */
@@ -335,8 +365,9 @@ export class DrillSession {
       status: this.status,
       statusText: this.statusText,
       cardIndex: this.cardIndex,
-      totalCards: this.opts.cards.length,
-      current: this.opts.cards[this.cardIndex] ?? null,
+      totalCards: this.queue.length,
+      remaining: Math.max(0, this.queue.length - this.cardIndex - 1),
+      current: this.queue[this.cardIndex] ?? null,
       lastStatus: this.lastStatus,
       liveHypotheses: this.liveHypotheses,
       liveOnsetMs: this.liveOnsetMs,

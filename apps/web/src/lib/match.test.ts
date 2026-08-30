@@ -1,11 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { KANA_GROUPS } from './kana';
+import { ALL_CARDS } from './kana';
 import { expectedFor, judge, normalize } from './match';
 
 const card = (glyph: string) => {
-  const found = Object.values(KANA_GROUPS)
-    .flat()
-    .find((c) => c.glyph === glyph);
+  const found = ALL_CARDS.find((c) => c.glyph === glyph);
   if (!found) throw new Error(`no card for ${glyph}`);
   return found;
 };

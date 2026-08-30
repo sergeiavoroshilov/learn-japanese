@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { KANA_GROUPS } from './kana';
+import { DECKS } from './kana';
 import type { CardOutcome } from './session';
 import { percentile, summarize } from './stats';
 
-const card = KANA_GROUPS.basic[0];
+const card = DECKS[0]!.cards[0]!;
 
 function outcome(over: Partial<CardOutcome>): CardOutcome {
   return {
