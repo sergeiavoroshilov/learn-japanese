@@ -36,6 +36,7 @@ export function App() {
   const [grammarMode, setGrammarMode] = useState<GrammarMode>('card');
   const [flushOnSilence, setFlushOnSilence] = useState(true);
   const [witness, setWitness] = useState(true);
+  const [acceptFromWitness, setAcceptFromWitness] = useState(true);
   const [interCardMs, setInterCardMs] = useState(220);
 
   const [snapshot, setSnapshot] = useState<SessionSnapshot>(IDLE);
@@ -85,6 +86,7 @@ export function App() {
       grammarMode: activeEngine === 'vosk' ? grammarMode : undefined,
       deckVocabulary: vocabulary ?? [],
       witness: grammarMode === 'card' && witness,
+      acceptFromWitness: grammarMode === 'card' && witness && acceptFromWitness,
       flushOnSilence,
       interCardMs,
       onUpdate: setSnapshot,
@@ -103,6 +105,7 @@ export function App() {
     vocabulary,
     flushOnSilence,
     witness,
+    acceptFromWitness,
     interCardMs,
   ]);
 
@@ -323,6 +326,17 @@ export function App() {
                 <span>Контрольный декодер (вся колода)</span>
               </label>
             )}
+
+            {activeEngine === 'vosk' && grammarMode === 'card' && witness && (
+              <label className="field checkbox">
+                <input
+                  type="checkbox"
+                  checked={acceptFromWitness}
+                  onChange={(e) => setAcceptFromWitness(e.target.checked)}
+                />
+                <span>Засчитывать и по контрольному</span>
+              </label>
+            )}
           </div>
 
           <button className="primary" onClick={start} disabled={!supported || groups.length === 0}>
@@ -395,6 +409,11 @@ export function App() {
               label="С учётом поздних"
               value={`${Math.round(stats.eventualHitRate * 100)}%`}
             />
+            <Stat
+              label="Зачтено контрольным"
+              value={String(stats.matchedByDeck)}
+              hint={`из ${stats.matched}`}
+            />
             <Stat label="Таймауты" value={String(stats.timeouts)} />
             <Stat label="Точных / по подстроке" value={`${stats.exact} / ${stats.containsOnly}`} />
             <Stat label="Начало речи, медиана" value={ms(stats.onsetMedian)} />
@@ -436,7 +455,11 @@ export function App() {
                   <td>{o.index + 1}</td>
                   <td className="cell-glyph">{o.card.glyph}</td>
                   <td>{o.card.romaji}</td>
-                  <td>{statusLabel(o.status)}{o.exact === false ? ' (подстрока)' : ''}</td>
+                  <td>
+                    {statusLabel(o.status)}
+                    {o.exact === false ? ' (подстрока)' : ''}
+                    {o.matchedBy === 'deck' ? ' · контрольным' : ''}
+                  </td>
                   <td>{ms(o.onsetMs)}</td>
                   <td>{ms(o.asrLagMs)}</td>
                   <td>{ms(o.matchMs ?? o.lateMs)}</td>

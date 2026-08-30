@@ -1,0 +1,525 @@
+{
+  "recognizer": "Vosk (словарь из одной ожидаемой моры)",
+  "rule": "exact",
+  "grammarMode": "card",
+  "grammarSize": 1,
+  "timeoutMs": 6000,
+  "startedAt": "2026-08-30T14:45:55.692Z",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+  "stats": {
+    "total": 20,
+    "matched": 17,
+    "exact": 17,
+    "containsOnly": 0,
+    "late": 0,
+    "timeouts": 3,
+    "skipped": 0,
+    "hitRate": 0.85,
+    "eventualHitRate": 0.85,
+    "lateMedian": null,
+    "onsetMedian": 1300,
+    "matchMedian": 1697,
+    "asrLagMedian": 395,
+    "asrLagP90": 544,
+    "cardsWithWrongHypotheses": 7
+  },
+  "cards": [
+    {
+      "glyph": "り",
+      "romaji": "ri",
+      "status": "match",
+      "onsetMs": 1347,
+      "speechMs": 318,
+      "matchMs": 5642,
+      "asrLagMs": 4295,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "り",
+      "witnessHeard": [
+        "り"
+      ],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "atMs": 1710,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "[unk] り",
+          "atMs": 1908,
+          "final": true,
+          "matched": true
+        },
+        {
+          "transcript": "り",
+          "atMs": 5642,
+          "final": true,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "わ",
+      "romaji": "wa",
+      "status": "match",
+      "onsetMs": 1617,
+      "speechMs": 321,
+      "matchMs": 2104,
+      "asrLagMs": 487,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "わ",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "わ",
+          "atMs": 2104,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "お",
+      "romaji": "o",
+      "status": "match",
+      "onsetMs": 2170,
+      "speechMs": 221,
+      "matchMs": 2586,
+      "asrLagMs": 416,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "お",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "お",
+          "atMs": 2586,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "に",
+      "romaji": "ni",
+      "status": "match",
+      "onsetMs": 1882,
+      "speechMs": 319,
+      "matchMs": 2426,
+      "asrLagMs": 544,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "に",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "に",
+          "atMs": 2426,
+          "final": true,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "あ",
+      "romaji": "a",
+      "status": "match",
+      "onsetMs": 1752,
+      "speechMs": null,
+      "matchMs": 2128,
+      "asrLagMs": 376,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "あ",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "あ",
+          "atMs": 2128,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "ゆ",
+      "romaji": "yu",
+      "status": "match",
+      "onsetMs": 1717,
+      "speechMs": null,
+      "matchMs": 2220,
+      "asrLagMs": 503,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "ゆ",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "ゆ",
+          "atMs": 2220,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "る",
+      "romaji": "ru",
+      "status": "timeout",
+      "onsetMs": 2296,
+      "speechMs": 321,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "lateMs": null,
+      "matchedTranscript": null,
+      "witnessHeard": [
+        "を"
+      ],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "atMs": 2573,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "[unk] [unk]",
+          "atMs": 2917,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "atMs": 5093,
+          "final": true,
+          "matched": false
+        }
+      ]
+    },
+    {
+      "glyph": "ら",
+      "romaji": "ra",
+      "status": "timeout",
+      "onsetMs": 1434,
+      "speechMs": 240,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "lateMs": null,
+      "matchedTranscript": null,
+      "witnessHeard": [
+        "[unk]",
+        "し",
+        "し",
+        "り"
+      ],
+      "hypotheses": [
+        {
+          "transcript": "[unk] [unk]",
+          "atMs": 469,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "[unk] [unk] [unk]",
+          "atMs": 598,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "atMs": 1875,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "atMs": 1941,
+          "final": true,
+          "matched": false
+        }
+      ]
+    },
+    {
+      "glyph": "せ",
+      "romaji": "se",
+      "status": "match",
+      "onsetMs": 1891,
+      "speechMs": 162,
+      "matchMs": 2181,
+      "asrLagMs": 290,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "せ",
+      "witnessHeard": [
+        "ち"
+      ],
+      "hypotheses": [
+        {
+          "transcript": "[unk] [unk]",
+          "atMs": 341,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "せ",
+          "atMs": 2181,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "れ",
+      "romaji": "re",
+      "status": "match",
+      "onsetMs": 2301,
+      "speechMs": null,
+      "matchMs": 2563,
+      "asrLagMs": 262,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "れ",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "れ",
+          "atMs": 2563,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "も",
+      "romaji": "mo",
+      "status": "match",
+      "onsetMs": 1077,
+      "speechMs": 340,
+      "matchMs": 1466,
+      "asrLagMs": 389,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "も",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "も",
+          "atMs": 1466,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "く",
+      "romaji": "ku",
+      "status": "match",
+      "onsetMs": 667,
+      "speechMs": null,
+      "matchMs": 930,
+      "asrLagMs": 263,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "く",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "く",
+          "atMs": 930,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "た",
+      "romaji": "ta",
+      "status": "match",
+      "onsetMs": 1077,
+      "speechMs": null,
+      "matchMs": 1423,
+      "asrLagMs": 346,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "た",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "た",
+          "atMs": 1423,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "い",
+      "romaji": "i",
+      "status": "timeout",
+      "onsetMs": 732,
+      "speechMs": 240,
+      "matchMs": null,
+      "asrLagMs": null,
+      "exact": null,
+      "lateMs": null,
+      "matchedTranscript": null,
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "atMs": 1193,
+          "final": true,
+          "matched": false
+        },
+        {
+          "transcript": "[unk]",
+          "atMs": 2482,
+          "final": false,
+          "matched": false
+        }
+      ]
+    },
+    {
+      "glyph": "へ",
+      "romaji": "he",
+      "status": "match",
+      "onsetMs": 1210,
+      "speechMs": 200,
+      "matchMs": 1657,
+      "asrLagMs": 447,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "へ",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "atMs": 1376,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "へ",
+          "atMs": 1657,
+          "final": true,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "め",
+      "romaji": "me",
+      "status": "match",
+      "onsetMs": 1149,
+      "speechMs": 263,
+      "matchMs": 1649,
+      "asrLagMs": 500,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "め",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "め",
+          "atMs": 1649,
+          "final": true,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "を",
+      "romaji": "wo",
+      "status": "match",
+      "onsetMs": 1016,
+      "speechMs": null,
+      "matchMs": 1323,
+      "asrLagMs": 307,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "を",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "を",
+          "atMs": 1323,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "ひ",
+      "romaji": "hi",
+      "status": "match",
+      "onsetMs": 1252,
+      "speechMs": null,
+      "matchMs": 1451,
+      "asrLagMs": 199,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "ひ",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "ひ",
+          "atMs": 1451,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "ろ",
+      "romaji": "ro",
+      "status": "match",
+      "onsetMs": 1300,
+      "speechMs": null,
+      "matchMs": 1697,
+      "asrLagMs": 397,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "ろ",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "ろ",
+          "atMs": 1697,
+          "final": false,
+          "matched": true
+        }
+      ]
+    },
+    {
+      "glyph": "て",
+      "romaji": "te",
+      "status": "match",
+      "onsetMs": 1120,
+      "speechMs": 200,
+      "matchMs": 1515,
+      "asrLagMs": 395,
+      "exact": true,
+      "lateMs": null,
+      "matchedTranscript": "て",
+      "witnessHeard": [],
+      "hypotheses": [
+        {
+          "transcript": "[unk]",
+          "atMs": 1450,
+          "final": false,
+          "matched": false
+        },
+        {
+          "transcript": "て",
+          "atMs": 1515,
+          "final": true,
+          "matched": true
+        }
+      ]
+    }
+  ]
+}

@@ -16,6 +16,7 @@ function outcome(over: Partial<CardOutcome>): CardOutcome {
     status: 'match',
     matchedTranscript: card.glyph,
     exact: true,
+    matchedBy: 'card',
     lateMs: null,
     witnessHeard: [],
     hypotheses: [],
@@ -52,6 +53,17 @@ describe('summarize', () => {
     expect(stats.timeouts).toBe(1);
     expect(stats.skipped).toBe(1);
     expect(stats.hitRate).toBe(0.5);
+  });
+
+  test('counts which decoder accepted the answer', () => {
+    const stats = summarize([
+      outcome({}),
+      outcome({ matchedBy: 'deck' }),
+      outcome({ matchedBy: 'deck' }),
+      outcome({ status: 'timeout', matchedBy: null, exact: null }),
+    ]);
+    expect(stats.matched).toBe(3);
+    expect(stats.matchedByDeck).toBe(2);
   });
 
   test('latency medians ignore cards without a measurement', () => {

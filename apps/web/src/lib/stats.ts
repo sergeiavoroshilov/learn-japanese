@@ -15,6 +15,8 @@ export interface SessionStats {
   matched: number;
   exact: number;
   containsOnly: number;
+  /** Matches the per-card decoder refused and the deck-wide one caught. */
+  matchedByDeck: number;
   /** Right answer, but only after the card had closed. */
   late: number;
   timeouts: number;
@@ -48,6 +50,7 @@ export function summarize(outcomes: CardOutcome[]): SessionStats {
     matched: matched.length,
     exact: matched.filter((o) => o.exact === true).length,
     containsOnly: matched.filter((o) => o.exact === false).length,
+    matchedByDeck: matched.filter((o) => o.matchedBy === 'deck').length,
     late: late.length,
     timeouts: outcomes.filter((o) => o.status === 'timeout').length,
     skipped: outcomes.filter((o) => o.status === 'skipped').length,
@@ -85,10 +88,17 @@ export interface RunReport {
     matchMs: number | null;
     asrLagMs: number | null;
     exact: boolean | null;
+    matchedBy: string | null;
     lateMs: number | null;
     matchedTranscript: string | null;
     witnessHeard: string[];
-    hypotheses: { transcript: string; atMs: number; final: boolean; matched: boolean }[];
+    hypotheses: {
+      transcript: string;
+      source: string | null;
+      atMs: number;
+      final: boolean;
+      matched: boolean;
+    }[];
   }[];
 }
 
@@ -116,11 +126,13 @@ export function buildReport(
       matchMs: o.matchMs,
       asrLagMs: o.asrLagMs,
       exact: o.exact,
+      matchedBy: o.matchedBy,
       lateMs: o.lateMs,
       matchedTranscript: o.matchedTranscript,
       witnessHeard: o.witnessHeard,
       hypotheses: o.hypotheses.map((h) => ({
         transcript: h.transcript,
+        source: h.source ?? null,
         atMs: h.atMs,
         final: h.final,
         matched: h.verdict.contains,

@@ -42,6 +42,12 @@ export interface VoskOptions {
   deckVocabulary: string[];
   /** Run a deck-wide decoder alongside `card` mode, purely to log its opinion. */
   witness?: boolean;
+  /**
+   * Let that control decoder also accept an answer. Two decoders constrained
+   * differently fail on different sounds, so the union recovers cards the
+   * single-word one refuses — while a wrong answer still has to fool both.
+   */
+  acceptFromWitness?: boolean;
   onStatus?(text: string): void;
 }
 
@@ -127,10 +133,11 @@ export class VoskRecognizer implements DrillRecognizer {
     if (!model || !mic) return null;
     const recognizer = new model.KaldiRecognizer(mic.sampleRate, JSON.stringify([...words, '[unk]']));
     recognizer.on('result', (message) => {
-      if ('result' in message && 'text' in message.result) {
-        const text = message.result.text.trim();
-        if (text) this.events.onWitness?.(text);
-      }
+      if (!('result' in message) || !('text' in message.result)) return;
+      const text = message.result.text.trim();
+      if (!text) return;
+      this.events.onWitness?.(text);
+      if (this.opts.acceptFromWitness) this.handle(text, true, 'deck');
     });
     return recognizer;
   }
@@ -148,12 +155,12 @@ export class VoskRecognizer implements DrillRecognizer {
 
     recognizer.on('partialresult', (message) => {
       if ('result' in message && 'partial' in message.result) {
-        this.handle(message.result.partial, false);
+        this.handle(message.result.partial, false, 'card');
       }
     });
     recognizer.on('result', (message) => {
       if ('result' in message && 'text' in message.result) {
-        this.handle(message.result.text, true);
+        this.handle(message.result.text, true, 'card');
       }
     });
     recognizer.on('error', (message) => {
@@ -207,11 +214,11 @@ export class VoskRecognizer implements DrillRecognizer {
     this.events.onListening(false);
   }
 
-  private handle(rawText: string, final: boolean): void {
+  private handle(rawText: string, final: boolean, source: 'card' | 'deck'): void {
     const transcript = rawText.trim();
     if (!transcript || !this.current) return;
 
-    const key = `${transcript}:${final}:${this.armed}`;
+    const key = `${source}:${transcript}:${final}:${this.armed}`;
     if (this.seen.has(key)) return;
     this.seen.add(key);
 
@@ -223,6 +230,7 @@ export class VoskRecognizer implements DrillRecognizer {
       const verdict = judge(transcript, this.current.expected);
       const hypothesis: Hypothesis = {
         transcript,
+        source,
         atMs: Math.round(now - this.current.shownAt),
         final,
         verdict,
@@ -243,6 +251,7 @@ export class VoskRecognizer implements DrillRecognizer {
           this.previous = null;
           this.events.onLateMatch({
             transcript,
+            source,
             atMs: Math.round(now - shownAt),
             final,
             verdict: lateVerdict,
@@ -261,6 +270,7 @@ export class VoskRecognizer implements DrillRecognizer {
       if (hits(verdict)) {
         this.events.onLateMatch({
           transcript,
+          source,
           atMs: Math.round(now - this.current.shownAt),
           final,
           verdict,

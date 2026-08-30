@@ -49,6 +49,22 @@ describe('judge', () => {
     expect(v.exact).toBe(false);
   });
 
+  test('the decoder\'s [unk] filler does not spoil an otherwise exact answer', () => {
+    const v = judge('[unk] り', expectedFor(card('り')));
+    expect(v.exact).toBe(true);
+  });
+
+  test('[unk] alone is not an answer', () => {
+    const v = judge('[unk]', expectedFor(card('り')));
+    expect(v.exact).toBe(false);
+    expect(v.contains).toBe(false);
+    expect(v.partial).toBe(false);
+  });
+
+  test('[unk] does not turn a wrong mora into a right one', () => {
+    expect(judge('[unk] こ', expectedFor(card('く'))).contains).toBe(false);
+  });
+
   test('rejects a different syllable', () => {
     const v = judge('け', expectedFor(card('く')));
     expect(v.contains).toBe(false);

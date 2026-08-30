@@ -17,11 +17,19 @@ export function expectedFor(card: KanaCard): Expected {
 const NOISE = /[\s　。、．，,.!?！？・…「」『』ー～]/g;
 
 /**
+ * Vosk's placeholder for "a sound I have no word for". The user never said it,
+ * so it must not take part in matching — left in, «[unk] り» fails a strict
+ * comparison against «り» and the answer looks wrong when it was right.
+ */
+const UNKNOWN_TOKEN = /\[unk\]/g;
+
+/**
  * Fold whatever the engine returned into plain hiragana: katakana and romaji
  * both collapse onto the same representation, so く / ク / ku compare equal.
  */
 export function normalize(raw: string): string {
-  return toHiragana(raw.replace(NOISE, '').toLowerCase(), { passRomaji: false });
+  const stripped = raw.replace(UNKNOWN_TOKEN, ' ').replace(NOISE, '').toLowerCase();
+  return toHiragana(stripped, { passRomaji: false });
 }
 
 export interface MatchVerdict {
@@ -40,7 +48,7 @@ export interface MatchVerdict {
 
 export function judge(transcript: string, expected: Expected): MatchVerdict {
   const normalized = normalize(transcript);
-  const raw = transcript.replace(NOISE, '').toLowerCase();
+  const raw = transcript.replace(UNKNOWN_TOKEN, ' ').replace(NOISE, '').toLowerCase();
   const targets = expected.accept.map(normalize).filter((t) => t.length > 0);
   const contains = targets.some((t) => normalized.includes(t));
 

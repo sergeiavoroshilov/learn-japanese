@@ -32,6 +32,8 @@ export interface CardOutcome {
   matchedTranscript: string | null;
   /** Whether the match was exact or only a substring. */
   exact: boolean | null;
+  /** Which decoder accepted the answer. */
+  matchedBy: 'card' | 'deck' | null;
   /**
    * The engine got this card right, but only after the drill had moved on.
    * Kept separate from a match: correct-but-too-slow is a latency problem,
@@ -78,6 +80,8 @@ export interface SessionOptions {
   deckVocabulary?: string[];
   /** Log a deck-wide decoder's opinion alongside per-card grammar. */
   witness?: boolean;
+  /** Let that decoder accept answers too, not just log them. */
+  acceptFromWitness?: boolean;
   onUpdate(snapshot: SessionSnapshot): void;
 }
 
@@ -138,6 +142,9 @@ export class DrillSession {
       // ~2 s answer and an instant one.
       this.detector.onSpeechEnd((speechMs) => {
         this.liveSpeechMs = speechMs;
+        // A card usually closes on the match, before the answer has finished
+        // being spoken — backfill it so the duration is not lost.
+        this.backfillSpeechMs(speechMs);
         if (this.opts.flushOnSilence !== false) this.recognizer.flush?.();
       });
       this.recognizer =
@@ -146,6 +153,7 @@ export class DrillSession {
               mode: opts.grammarMode ?? 'deck',
               deckVocabulary: opts.deckVocabulary ?? [],
               witness: opts.witness,
+              acceptFromWitness: opts.acceptFromWitness,
               onStatus: (text) => {
                 this.statusText = text;
                 this.emit();
@@ -258,6 +266,7 @@ export class DrillSession {
         status,
         matchedTranscript: match?.transcript ?? null,
         exact: match ? match.verdict.exact : null,
+        matchedBy: match?.source ?? null,
         lateMs: null,
         hypotheses: this.liveHypotheses,
         witnessHeard: this.liveWitness,
@@ -267,6 +276,14 @@ export class DrillSession {
     this.emit();
 
     this.advanceTimer = window.setTimeout(() => this.nextCard(), this.interCardMs);
+  }
+
+  /** Speech ended after its card had already closed on a match. */
+  private backfillSpeechMs(speechMs: number): void {
+    const index = this.outcomes.length - 1;
+    const last = this.outcomes[index];
+    if (!last || last.speechMs !== null || this.cardIndex !== index) return;
+    this.outcomes = [...this.outcomes.slice(0, index), { ...last, speechMs }];
   }
 
   /** The previous card's answer arrived after we gave up on it. */

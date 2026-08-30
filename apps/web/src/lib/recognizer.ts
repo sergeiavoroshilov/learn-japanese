@@ -4,6 +4,11 @@ import { judge, type Expected, type MatchVerdict } from './match';
 export interface Hypothesis {
   /** Raw text as the engine returned it. */
   transcript: string;
+  /**
+   * Which decoder said it: the per-card one, or the deck-wide control running
+   * alongside. Kept so the two can be counted separately after the fact.
+   */
+  source?: 'card' | 'deck';
   /** ms since the card was shown. */
   atMs: number;
   final: boolean;
