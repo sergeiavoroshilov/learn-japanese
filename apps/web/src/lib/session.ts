@@ -105,6 +105,8 @@ export interface SessionOptions {
   longForms?: boolean;
   /** Every mora of this session, for deck-wide grammar. */
   deckVocabulary?: string[];
+  /** What the control decoder may name; defaults to the deck's own moras. */
+  witnessVocabulary?: string[];
   /** Log a deck-wide decoder's opinion alongside per-card grammar. */
   witness?: boolean;
   /** Let that decoder accept answers too, not just log them. */
@@ -196,6 +198,7 @@ export class DrillSession {
           ? new VoskRecognizer(events, opts.rule, {
               mode: opts.grammarMode ?? 'deck',
               deckVocabulary: opts.deckVocabulary ?? [],
+              witnessVocabulary: opts.witnessVocabulary,
               witness: opts.witness,
               acceptFromWitness: opts.acceptFromWitness,
               onStatus: (text) => {

@@ -1,5 +1,13 @@
 import { describe, expect, test } from 'bun:test';
-import { ALL_CARDS, DECKS, cardById, cardsOf, deckById, drawCards } from './kana';
+import {
+  ALL_CARDS,
+  DECKS,
+  NAMEABLE_CARDS,
+  cardById,
+  cardsOf,
+  deckById,
+  drawCards,
+} from './kana';
 
 describe('kana tables', () => {
   test('every script has the standard group sizes', () => {
@@ -101,5 +109,23 @@ describe('gojūon grid', () => {
       const fromGrid = deck.grid.rows.flatMap((r) => r.cells.filter(Boolean));
       expect(fromGrid).toHaveLength(deck.cards.length);
     }
+  });
+});
+
+describe('NAMEABLE_CARDS', () => {
+  test('is the whole hiragana table, once each', () => {
+    // 46 + 25 + 33 = 104, less the three the model has no word for.
+    expect(NAMEABLE_CARDS).toHaveLength(101);
+    expect(new Set(NAMEABLE_CARDS.map((c) => c.kana)).size).toBe(101);
+  });
+
+  test('leaves out what the recogniser cannot say', () => {
+    expect(NAMEABLE_CARDS.some((c) => c.voiceOov)).toBe(false);
+  });
+
+  test('covers moras outside any one deck — that is the point', () => {
+    // Drilling the /u/ column, the control decoder still has を to offer.
+    expect(NAMEABLE_CARDS.some((c) => c.kana === 'を')).toBe(true);
+    expect(NAMEABLE_CARDS.some((c) => c.kana === 'お')).toBe(true);
   });
 });

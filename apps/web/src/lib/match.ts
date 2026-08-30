@@ -15,7 +15,11 @@ export interface Expected {
 }
 
 export function expectedFor(card: KanaCard, longForms = true): Expected {
-  const forms = LEXICON_FORMS[card.kana] ?? [card.kana];
+  // A mora the model has no word for at all (びゃ, ぴゃ, ぴょ) has an empty
+  // list. Fall back to the kana so nothing downstream sees an empty grammar
+  // or a card with no accepted reading.
+  const known = LEXICON_FORMS[card.kana];
+  const forms = known && known.length > 0 ? known : [card.kana];
   // The bare mora is always first: it is what a decoder restricted to a single
   // word is given when the long variants are switched off.
   const lexical = longForms ? forms : forms.slice(0, 1);

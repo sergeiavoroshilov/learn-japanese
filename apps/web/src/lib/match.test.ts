@@ -134,3 +134,13 @@ describe('lexicon forms', () => {
     expect(judge('ぢ', expectedFor(card('ぢ'))).exact).toBe(true);
   });
 });
+
+describe('moras the model has no word for', () => {
+  test('still have an accepted reading rather than an empty grammar', () => {
+    // びゃ is absent from the lexicon; the card is kept out of voice sessions,
+    // but nothing downstream may be handed an empty word list.
+    const expected = expectedFor(card('びゃ'));
+    expect(expected.lexical).toEqual(['びゃ']);
+    expect(judge('びゃ', expected).exact).toBe(true);
+  });
+});

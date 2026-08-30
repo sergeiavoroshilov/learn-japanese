@@ -26,6 +26,25 @@ export interface Hypothesis {
   spanMs?: number;
 }
 
+/**
+ * vosk-model-small-ja-0.22 runs with --frame-subsampling-factor=3, so the
+ * decoder emits one output every 30 ms.
+ */
+export const DECODER_FRAME_MS = 30;
+
+/**
+ * A result covering a single decoder frame is a scrap of the previous
+ * utterance, not an answer to this card. Measured moras span 117–358 ms; every
+ * 30 ms result in the logs landed within a few hundred ms of the card
+ * appearing, with the real answer arriving afterwards.
+ *
+ * Cuts both ways: such a result must neither ask the learner to repeat
+ * themselves nor be accepted as a match.
+ */
+export function isFragment(spanMs: number | undefined): boolean {
+  return spanMs !== undefined && spanMs <= DECODER_FRAME_MS;
+}
+
 export interface RecognizerEvents {
   /** Any hypothesis for the current card — matching or not. Logged verbatim. */
   onHypothesis(h: Hypothesis): void;

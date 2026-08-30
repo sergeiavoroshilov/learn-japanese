@@ -2,7 +2,13 @@ import * as voskModule from 'vosk-browser';
 import type { KaldiRecognizer, Model } from 'vosk-browser';
 import type { MicSource } from './audio';
 import { judge, type Expected } from './match';
-import type { DrillRecognizer, Hypothesis, MatchRule, RecognizerEvents } from './recognizer';
+import {
+  isFragment,
+  type DrillRecognizer,
+  type Hypothesis,
+  type MatchRule,
+  type RecognizerEvents,
+} from './recognizer';
 
 /**
  * vosk-browser ships a UMD bundle. Depending on who does the interop, the API
@@ -47,6 +53,8 @@ function detail(result: { result?: { conf: number; start: number; end: number }[
 /** How long after a card appears a bare «[unk]» is still the previous card's tail. */
 const TAIL_WINDOW_MS = 300;
 
+
+
 /**
  * How tightly the decoder is constrained.
  *
@@ -63,6 +71,16 @@ export interface VoskOptions {
   mode: GrammarMode;
   /** Every mora of the session; used by `deck` mode. */
   deckVocabulary: string[];
+  /**
+   * What the control decoder is allowed to name — the whole kana table by
+   * default, not just what is being drilled.
+   *
+   * Restricting it to the session's own moras made it useless exactly when it
+   * mattered: drilling only the /u/ column, it could not answer «を» for う
+   * because を was not on the list, so a confusion it had named clearly in
+   * three earlier runs came back as a shrug.
+   */
+  witnessVocabulary?: string[];
   /** Run a deck-wide decoder alongside `card` mode, purely to log its opinion. */
   witness?: boolean;
   /**
@@ -134,8 +152,9 @@ export class VoskRecognizer implements DrillRecognizer {
       this.recognizer = this.spawn(
         this.opts.mode === 'deck' ? this.opts.deckVocabulary : null,
       );
-    } else if (this.opts.witness && this.opts.deckVocabulary.length > 0) {
-      this.witness = this.spawnWitness(this.opts.deckVocabulary);
+    } else if (this.opts.witness) {
+      const vocabulary = this.opts.witnessVocabulary ?? this.opts.deckVocabulary;
+      if (vocabulary.length > 0) this.witness = this.spawnWitness(vocabulary);
     }
 
     // Audio is routed to whichever recognizer is current: in per-card mode a
@@ -252,6 +271,11 @@ export class VoskRecognizer implements DrillRecognizer {
   ): void {
     const transcript = rawText.trim();
     if (!transcript || !this.current) return;
+
+    // One frame of audio cannot be a mora — in either direction. Logging it
+    // makes the drill ask for a repeat that was never needed, and matching on
+    // it would be a false accept on a fragment.
+    if (isFragment(detail?.spanMs)) return;
 
     // Closing a card flushes the decoder, and that final result lands just
     // after the next card appears. An empty-but-for-[unk] result in the first

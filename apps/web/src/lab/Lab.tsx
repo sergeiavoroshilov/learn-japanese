@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { DECKS, VOICE_OOV_KANA, drawFrom, type DeckId, type KanaCard } from '../lib/kana';
+import {
+  DECKS,
+  NAMEABLE_CARDS,
+  VOICE_OOV_KANA,
+  drawFrom,
+  type DeckId,
+  type KanaCard,
+} from '../lib/kana';
 import { KanaGrid } from './KanaGrid';
 import { grammarFor } from '../lib/match';
 import { correctionFor } from '../lib/pronounce';
@@ -82,6 +89,8 @@ export function Lab() {
     () => shown.flatMap((d) => d.cards).filter((c) => selected.has(c.id)),
     [shown, selected],
   );
+  /** The control decoder always knows the whole table, not just the selection. */
+  const witnessVocabulary = useMemo(() => grammarFor(NAMEABLE_CARDS), []);
   const vocabulary = useMemo(
     () =>
       grammarActive
@@ -107,6 +116,7 @@ export function Lab() {
       engine: activeEngine,
       grammarMode: activeEngine === 'vosk' ? grammarMode : undefined,
       deckVocabulary: vocabulary ?? [],
+      witnessVocabulary: witnessVocabulary,
       witness: grammarMode === 'card' && witness,
       acceptFromWitness: grammarMode === 'card' && witness && acceptFromWitness,
       flushOnSilence,
@@ -133,6 +143,7 @@ export function Lab() {
     flushDelayMs,
     interCardMs,
     longForms,
+    witnessVocabulary,
   ]);
 
   const stop = useCallback(() => sessionRef.current?.stop(), []);

@@ -181,6 +181,15 @@ export const DECKS: Deck[] = (['hiragana', 'katakana'] as KanaScript[]).flatMap(
 
 export const ALL_CARDS: KanaCard[] = DECKS.flatMap((d) => d.cards);
 
+/**
+ * Every mora the recogniser can name, once each. This is what the control
+ * decoder gets: it decides nothing, so a wide vocabulary costs nothing, and a
+ * narrow one leaves it unable to name the very confusion worth naming.
+ */
+export const NAMEABLE_CARDS: KanaCard[] = DECKS.filter((d) => d.script === 'hiragana')
+  .flatMap((d) => d.cards)
+  .filter((c) => !c.voiceOov);
+
 const BY_ID = new Map(ALL_CARDS.map((c) => [c.id, c]));
 
 export function cardById(id: string): KanaCard | undefined {
