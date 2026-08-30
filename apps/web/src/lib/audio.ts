@@ -38,8 +38,14 @@ export class MicSource {
     return analyser;
   }
 
-  /** Streams raw PCM to a recognizer that decodes in the page (Vosk/WASM). */
-  onChunk(cb: (chunk: Float32Array, sampleRate: number) => void, bufferSize = 2048): void {
+  /**
+   * Streams raw PCM to a recognizer that decodes in the page (Vosk/WASM).
+   *
+   * @param bufferSize samples per chunk — also how far behind the decoder can
+   * be when we ask it to commit. 1024 at 16 kHz is 64 ms, small enough that a
+   * 200 ms mora is not cut in half by an early flush.
+   */
+  onChunk(cb: (chunk: Float32Array, sampleRate: number) => void, bufferSize = 1024): void {
     if (!this.ctx || !this.source) throw new Error('Микрофон не запущен');
     const processor = this.ctx.createScriptProcessor(bufferSize, 1, 1);
     processor.onaudioprocess = (event) => {

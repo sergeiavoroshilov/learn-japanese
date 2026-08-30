@@ -37,6 +37,14 @@ export interface SessionStats {
   asrLagP90: number | null;
   /** Cards where the engine reported something that did not match. */
   cardsWithWrongHypotheses: number;
+  /**
+   * Timeouts where the decoder only ever answered «[unk]»: it heard a sound
+   * and could not place it. Different failure from hearing a different mora,
+   * and different again from hearing nothing at all.
+   */
+  notPlaced: number;
+  /** Timeouts where the decoder said nothing whatsoever. */
+  engineSilent: number;
 }
 
 export function summarize(outcomes: CardOutcome[]): SessionStats {
@@ -65,6 +73,14 @@ export function summarize(outcomes: CardOutcome[]): SessionStats {
     cardsWithWrongHypotheses: outcomes.filter((o) =>
       o.hypotheses.some((h) => !h.verdict.contains && !h.verdict.partial),
     ).length,
+    notPlaced: outcomes.filter(
+      (o) =>
+        o.status === 'timeout' &&
+        o.hypotheses.length > 0 &&
+        o.hypotheses.every((h) => h.verdict.normalized === ''),
+    ).length,
+    engineSilent: outcomes.filter((o) => o.status === 'timeout' && o.hypotheses.length === 0)
+      .length,
   };
 }
 
@@ -73,6 +89,8 @@ export interface RunReport {
   rule: string;
   /** How the decoder was constrained: deck-wide, per card, or not at all. */
   grammarMode: string;
+  /** ms waited after silence before committing the decoder. */
+  flushDelayMs: number;
   /** Size of the restricted vocabulary, or null for free recognition. */
   grammarSize: number | null;
   timeoutMs: number;
@@ -108,6 +126,7 @@ export function buildReport(
     recognizer: string;
     rule: string;
     grammarMode: string;
+    flushDelayMs: number;
     grammarSize: number | null;
     timeoutMs: number;
     startedAt: string;

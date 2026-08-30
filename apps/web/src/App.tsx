@@ -38,6 +38,7 @@ export function App() {
   const [witness, setWitness] = useState(true);
   const [acceptFromWitness, setAcceptFromWitness] = useState(true);
   const [interCardMs, setInterCardMs] = useState(220);
+  const [flushDelayMs, setFlushDelayMs] = useState(250);
 
   const [snapshot, setSnapshot] = useState<SessionSnapshot>(IDLE);
   const [micLevel, setMicLevel] = useState(0);
@@ -88,6 +89,7 @@ export function App() {
       witness: grammarMode === 'card' && witness,
       acceptFromWitness: grammarMode === 'card' && witness && acceptFromWitness,
       flushOnSilence,
+      flushDelayMs,
       interCardMs,
       onUpdate: setSnapshot,
     });
@@ -106,6 +108,7 @@ export function App() {
     flushOnSilence,
     witness,
     acceptFromWitness,
+    flushDelayMs,
     interCardMs,
   ]);
 
@@ -134,11 +137,20 @@ export function App() {
 
   const stats = useMemo(() => summarize(snapshot.outcomes), [snapshot.outcomes]);
 
+  /**
+   * The decoder answered «[unk]»: it heard something and could not place it.
+   * Saying it again is the useful move, and silence gives the user no clue.
+   */
+  const notPlaced =
+    snapshot.liveHypotheses.length > 0 &&
+    snapshot.liveHypotheses.every((h) => h.verdict.normalized === '');
+
   const copyReport = useCallback(async () => {
     const report = buildReport(snapshot.outcomes, {
       recognizer: snapshot.recognizerName,
       rule,
       grammarMode,
+      flushDelayMs,
       grammarSize:
         grammarMode === 'card' ? 1 : grammarMode === 'deck' ? (vocabulary?.length ?? null) : null,
       timeoutMs,
@@ -150,6 +162,7 @@ export function App() {
     snapshot.recognizerName,
     rule,
     grammarMode,
+    flushDelayMs,
     vocabulary,
     timeoutMs,
     startedAt,
@@ -284,6 +297,20 @@ export function App() {
               </select>
             </label>
 
+            {activeEngine !== 'mock' && (
+              <label className="field">
+                <span className="label">Задержка коммита, мс</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={1000}
+                  step={50}
+                  value={flushDelayMs}
+                  onChange={(e) => setFlushDelayMs(Number(e.target.value))}
+                />
+              </label>
+            )}
+
             <label className="field">
               <span className="label">Пауза между карточками, мс</span>
               <input
@@ -370,6 +397,7 @@ export function App() {
           {showRomaji && <div className="romaji">{snapshot.current?.romaji}</div>}
 
           <div className="live">
+            {notPlaced && <div className="retry">не расслышал — скажите ещё раз</div>}
             <div className="live-onset">
               {snapshot.liveOnsetMs === null
                 ? 'ждём речь…'
@@ -414,6 +442,12 @@ export function App() {
               value={String(stats.matchedByDeck)}
               hint={`из ${stats.matched}`}
             />
+            <Stat
+              label="Звук не опознан"
+              value={String(stats.notPlaced)}
+              hint="движок ответил [unk]"
+            />
+            <Stat label="Движок промолчал" value={String(stats.engineSilent)} />
             <Stat label="Таймауты" value={String(stats.timeouts)} />
             <Stat label="Точных / по подстроке" value={`${stats.exact} / ${stats.containsOnly}`} />
             <Stat label="Начало речи, медиана" value={ms(stats.onsetMedian)} />

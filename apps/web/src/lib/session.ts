@@ -74,6 +74,13 @@ export interface SessionOptions {
   engine: Engine;
   /** Commit the decoder as soon as our VAD hears the answer end. */
   flushOnSilence?: boolean;
+  /**
+   * How long to wait after the VAD hears silence before committing. The
+   * decoder runs behind the microphone by a chunk plus worker queue; commit at
+   * zero and the tail of a short mora never reaches it, which comes back as
+   * «[unk]» — a rejected answer that was actually correct.
+   */
+  flushDelayMs?: number;
   /** How tightly the Vosk decoder is constrained. */
   grammarMode?: GrammarMode;
   /** Every mora of this session, for deck-wide grammar. */
@@ -105,10 +112,13 @@ export class DrillSession {
   private shownAt = 0;
   private timeoutTimer: number | null = null;
   private advanceTimer: number | null = null;
+  private flushTimer: number | null = null;
   private readonly interCardMs: number;
+  private readonly flushDelayMs: number;
 
   constructor(private readonly opts: SessionOptions) {
     this.interCardMs = opts.interCardMs ?? 220;
+    this.flushDelayMs = opts.flushDelayMs ?? 250;
     const events: RecognizerEvents = {
       onHypothesis: (h) => {
         this.liveHypotheses = [...this.liveHypotheses, h];
@@ -145,7 +155,13 @@ export class DrillSession {
         // A card usually closes on the match, before the answer has finished
         // being spoken — backfill it so the duration is not lost.
         this.backfillSpeechMs(speechMs);
-        if (this.opts.flushOnSilence !== false) this.recognizer.flush?.();
+        if (this.opts.flushOnSilence !== false) {
+          if (this.flushTimer !== null) window.clearTimeout(this.flushTimer);
+          this.flushTimer = window.setTimeout(
+            () => this.recognizer.flush?.(),
+            this.flushDelayMs,
+          );
+        }
       });
       this.recognizer =
         opts.engine === 'vosk'
@@ -308,8 +324,10 @@ export class DrillSession {
   private clearTimers(): void {
     if (this.timeoutTimer !== null) window.clearTimeout(this.timeoutTimer);
     if (this.advanceTimer !== null) window.clearTimeout(this.advanceTimer);
+    if (this.flushTimer !== null) window.clearTimeout(this.flushTimer);
     this.timeoutTimer = null;
     this.advanceTimer = null;
+    this.flushTimer = null;
   }
 
   private emit(): void {
