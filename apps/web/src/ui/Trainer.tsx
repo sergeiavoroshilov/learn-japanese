@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cardsOf, type KanaCard } from '../lib/kana';
 import { classify, factsFrom } from '../lib/grade';
 import { grammarFor } from '../lib/match';
+import { correctionFor, type Correction } from '../lib/pronounce';
 import { planSession, type SessionPlan } from '../lib/plan';
 import { DrillSession, type Engine, type SessionSnapshot } from '../lib/session';
 import { applyAnswer, isNew, type AnswerQuality, type CardProgress } from '../lib/srs';
@@ -20,6 +21,8 @@ export interface CardResult {
   intervalDays: number | null;
   /** The learner met this glyph for the first time in this session. */
   introduced: boolean;
+  /** What was heard instead, and what to do about it. */
+  correction: Correction | null;
 }
 
 const IDLE: SessionSnapshot = {
@@ -140,6 +143,7 @@ export function Trainer() {
             rating: applied.rating,
             intervalDays: applied.intervalDays,
             introduced,
+            correction: correctionFor(outcome.card, outcome.witnessHeard),
           },
         ]);
         setRevision((r) => r + 1);

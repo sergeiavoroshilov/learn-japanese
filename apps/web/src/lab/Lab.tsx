@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DECKS, VOICE_OOV_KANA, drawFrom, type DeckId, type KanaCard } from '../lib/kana';
 import { KanaGrid } from './KanaGrid';
-import { grammarFor, normalize } from '../lib/match';
+import { grammarFor } from '../lib/match';
+import { correctionFor } from '../lib/pronounce';
 import { isWebSpeechSupported, type MatchRule } from '../lib/recognizer';
 import { DrillSession, type Engine, type SessionSnapshot } from '../lib/session';
 import { buildReport, summarize } from '../lib/stats';
@@ -171,15 +172,8 @@ export function Lab() {
    * What the control decoder made of the answer the card decoder refused.
    * «услышал を» is actionable; «не расслышал» is not.
    */
-  const heardInstead = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          snapshot.liveWitness
-            .map((t) => normalize(t))
-            .filter((t) => t !== '' && t !== snapshot.current?.kana),
-        ),
-      ),
+  const correction = useMemo(
+    () => (snapshot.current ? correctionFor(snapshot.current, snapshot.liveWitness) : null),
     [snapshot.liveWitness, snapshot.current],
   );
 
@@ -469,9 +463,12 @@ export function Lab() {
           <div className="live">
             {notPlaced && (
               <div className="retry">
-                {heardInstead.length > 0
-                  ? `услышал «${heardInstead.join('», «')}» — скажите ещё раз`
-                  : 'не расслышал — скажите ещё раз'}
+                <span>
+                  {correction
+                    ? `услышал «${correction.heard}» — скажите ещё раз`
+                    : 'не расслышал — скажите ещё раз'}
+                </span>
+                {correction && <span className="retry-hint">{correction.hint}</span>}
               </div>
             )}
             <div className="live-onset">

@@ -1,4 +1,4 @@
-import { normalize } from '../lib/match';
+import { correctionFor } from '../lib/pronounce';
 import type { SessionSnapshot } from '../lib/session';
 import type { CardResult } from './Trainer';
 import { ms } from './format';
@@ -31,17 +31,13 @@ export function Drill({ snapshot, micLevel, showRomaji, lastResult, onSkip, onSt
     snapshot.liveHypotheses.every((h) => h.verdict.normalized === '');
 
   /**
-   * What the control decoder heard instead. Naming it turns a dead end into a
-   * correction: «услышал を» says the /u/ came out rounded, «не расслышал»
-   * says nothing at all.
+   * What the control decoder heard instead, turned into something to do about
+   * it. «услышал を, японская /u/ — без округления губ» is a lesson;
+   * «не расслышал» is a dead end.
    */
-  const heardInstead = Array.from(
-    new Set(
-      snapshot.liveWitness
-        .map((t) => normalize(t))
-        .filter((t) => t !== '' && t !== snapshot.current?.kana),
-    ),
-  );
+  const correction = snapshot.current
+    ? correctionFor(snapshot.current, snapshot.liveWitness)
+    : null;
 
   const feedbackCard = paused ? snapshot.outcomes[snapshot.outcomes.length - 1]?.card : undefined;
   const showAnswer = paused && snapshot.lastStatus !== 'match' && feedbackCard;
@@ -85,13 +81,15 @@ export function Drill({ snapshot, micLevel, showRomaji, lastResult, onSkip, onSt
       )}
 
       <div className="live">
-        {notPlaced && (
-          <div className="retry">
-            {heardInstead.length > 0
-              ? `услышал «${heardInstead.join('», «')}» — скажите ещё раз`
-              : 'не расслышал — скажите ещё раз'}
-          </div>
-        )}
+        {notPlaced &&
+          (correction ? (
+            <div className="retry">
+              <span>услышал «{correction.heard}» — скажите ещё раз</span>
+              <span className="retry-hint">{correction.hint}</span>
+            </div>
+          ) : (
+            <div className="retry">не расслышал — скажите ещё раз</div>
+          ))}
         {!paused && snapshot.liveOnsetMs !== null && (
           <div className="live-onset">{ms(snapshot.liveOnsetMs)}</div>
         )}

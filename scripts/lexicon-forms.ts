@@ -52,8 +52,15 @@ for (const deck of hiragana) {
       toKatakana(kana),
       `${kana}ー`,
       `${toKatakana(kana)}ー`,
-      // ん has no vowel to lengthen.
-      ...(vowel && card.row !== 'N' ? [`${kana}${vowel}`, `${toKatakana(kana)}${toKatakana(vowel)}`] : []),
+      // Held longer, a mora is spelled with its own vowel repeated: か → かあ.
+      // Doubling the mora itself would be wrong for か (かか is ka-ka, two
+      // moras) — except for ん, which has no vowel and whose held form really
+      // is んん, and which the sokuon spelling んっ also writes.
+      ...(card.row === 'N'
+        ? [`${kana}${kana}`, `${toKatakana(kana)}${toKatakana(kana)}`, `${kana}っ`]
+        : vowel
+          ? [`${kana}${vowel}`, `${toKatakana(kana)}${toKatakana(vowel)}`]
+          : []),
     ];
     const present = [...new Set(candidates.filter((w) => known.has(w)))];
     forms += present.length;

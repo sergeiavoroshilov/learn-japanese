@@ -37,6 +37,19 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
   const graded = results.filter((r) => r.rating !== null);
   const introduced = new Set(results.filter((r) => r.introduced).map((r) => r.card.id));
 
+  /**
+   * One line per mora that came out wrong in a nameable way. Deduplicated:
+   * the same slip on four cards is one thing to fix, not four.
+   */
+  const corrections = useMemo(() => {
+    const seen = new Set<string>();
+    return results.filter((r) => {
+      if (!r.correction || seen.has(r.card.id)) return false;
+      seen.add(r.card.id);
+      return true;
+    });
+  }, [results]);
+
   return (
     <section className="panel results">
       <h2>Сессия закончена</h2>
@@ -57,6 +70,20 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
         <Stat label="Новых символов" value={String(introduced.size)} />
         {plan && <Stat label="Было к повторению" value={String(plan.due)} />}
       </div>
+
+      {corrections.length > 0 && (
+        <div className="banner note">
+          <strong>Произношение</strong>
+          <ul className="corrections">
+            {corrections.map((r, i) => (
+              <li key={i}>
+                {r.card.glyph} ({r.card.romaji}) — услышано «{r.correction!.heard}»:{' '}
+                {r.correction!.hint}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {unplaced.length > 0 && (
         <p className="note-inline">
