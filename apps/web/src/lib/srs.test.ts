@@ -125,3 +125,28 @@ describe('isLearned', () => {
     expect(isLearned(lapsed.progress)).toBe(false);
   });
 });
+
+describe('mispronunciation', () => {
+  test('a nameable slip never reaches the scheduler', () => {
+    // The glyph was read correctly; only the mouth was wrong. Demoting the
+    // card would confuse a pronunciation problem with a memory one.
+    expect(ratingFor('mispronounced', 900)).toBeNull();
+  });
+
+  test('it is counted per mora, because that is the signal worth keeping', () => {
+    let p = newProgress('hira-む', NOW);
+    p = applyAnswer(p, { quality: 'mispronounced', onsetMs: 800 }, NOW).progress;
+    p = applyAnswer(p, { quality: 'mispronounced', onsetMs: 850 }, NOW).progress;
+    expect(p.mispronounced).toBe(2);
+    expect(p.graded).toBe(0);
+    expect(isNew(p)).toBe(true);
+  });
+
+  test('a plain misreading still costs the card its interval', () => {
+    const before = applyAnswer(newProgress('a', NOW), { quality: 'correct', onsetMs: 500 }, NOW);
+    const later = new Date(before.progress.fsrs.due);
+    const wrong = applyAnswer(before.progress, { quality: 'wrong', onsetMs: null }, later);
+    expect(wrong.rating).toBe(Rating.Again);
+    expect(wrong.progress.fsrs.stability).toBeLessThan(before.progress.fsrs.stability);
+  });
+});

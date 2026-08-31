@@ -5,7 +5,15 @@ import { expectedFor, judge } from './match';
 import type { CardOutcome } from './session';
 
 function facts(over: Partial<AnswerFacts> = {}): AnswerFacts {
-  return { status: 'timeout', onsetMs: 800, heard: [], soundHeard: false, repeated: false, ...over };
+  return {
+    status: 'timeout',
+    onsetMs: 800,
+    heard: [],
+    soundHeard: false,
+    repeated: false,
+    systematicSlip: false,
+    ...over,
+  };
 }
 
 describe('classify', () => {
@@ -17,8 +25,16 @@ describe('classify', () => {
     expect(classify(facts({ status: 'late' }))).toBe('correct');
   });
 
-  test('another existing mora is a reading error', () => {
+  test('another existing mora with no phonetic story is a reading error', () => {
     expect(classify(facts({ heard: ['ろ'], soundHeard: true }))).toBe('wrong');
+  });
+
+  test('a nameable pronunciation slip is not a reading error', () => {
+    // る heard as ろ is the /u/ column rounding, seen on seven moras: the
+    // glyph was read right and only said wrong, so recall did not fail.
+    expect(classify(facts({ heard: ['ろ'], soundHeard: true, systematicSlip: true }))).toBe(
+      'mispronounced',
+    );
   });
 
   test('a sound nothing could be made of is the decoder failing, not the learner', () => {
@@ -104,5 +120,48 @@ describe('factsFrom', () => {
     expect(facts.heard).toEqual([]);
     expect(facts.soundHeard).toBe(true);
     expect(classify(facts)).toBe('unplaced');
+  });
+});
+
+describe('systematic slips', () => {
+  const card = cardById('hira-む')!;
+
+  function outcome(over: Partial<CardOutcome>): CardOutcome {
+    return {
+      index: 0,
+      card,
+      onsetMs: 800,
+      speechMs: 261,
+      matchMs: null,
+      asrLagMs: null,
+      status: 'timeout',
+      matchedTranscript: null,
+      exact: null,
+      matchedBy: null,
+      lateMs: null,
+      hypotheses: [],
+      witnessHeard: [],
+      ...over,
+    };
+  }
+
+  test('む heard as モー is the /u/ rounding, not a misread glyph', () => {
+    const facts = factsFrom(outcome({ witnessHeard: ['モ', 'モー'] }));
+    expect(facts.systematicSlip).toBe(true);
+    expect(classify(facts)).toBe('mispronounced');
+  });
+
+  test('む heard as ぬ is a different glyph and stays a reading error', () => {
+    const facts = factsFrom(outcome({ witnessHeard: ['ぬ'] }));
+    expect(facts.systematicSlip).toBe(false);
+    expect(classify(facts)).toBe('wrong');
+  });
+
+  test('つ heard as しょ is still the rounding — nobody reads つ as しょ', () => {
+    // The glyphs look nothing alike, so a misread is not a live hypothesis; a
+    // rounded vowel smearing the affricate is.
+    const facts = factsFrom(outcome({ card: cardById('hira-つ')!, witnessHeard: ['ショ'] }));
+    expect(facts.systematicSlip).toBe(true);
+    expect(classify(facts)).toBe('mispronounced');
   });
 });

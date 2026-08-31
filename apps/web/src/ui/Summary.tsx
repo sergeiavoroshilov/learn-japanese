@@ -14,6 +14,7 @@ interface Props {
 const QUALITY_LABEL: Record<string, string> = {
   correct: 'верно',
   wrong: 'другая мора',
+  mispronounced: 'произношение',
   silent: 'не вспомнил',
   unplaced: 'не разобрал',
   skipped: 'пропуск',
@@ -23,6 +24,7 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
   const correct = results.filter((r) => r.quality === 'correct');
   const wrong = results.filter((r) => r.quality === 'wrong' || r.quality === 'silent');
   const unplaced = results.filter((r) => r.quality === 'unplaced');
+  const slips = results.filter((r) => r.quality === 'mispronounced');
 
   const medianOnset = useMemo(
     () =>
@@ -63,6 +65,11 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
         <Stat label="Скорость ответа, медиана" value={ms(medianOnset)} />
         <Stat label="Ошибок чтения" value={String(wrong.length)} />
         <Stat
+          label="Произношение"
+          value={String(slips.length)}
+          hint="чтение верное, на график не влияет"
+        />
+        <Stat
           label="Не разобрал распознаватель"
           value={String(unplaced.length)}
           hint="на планирование не влияет"
@@ -73,7 +80,7 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
 
       {corrections.length > 0 && (
         <div className="banner note">
-          <strong>Произношение</strong>
+          <strong>Что поправить в произношении</strong>
           <ul className="corrections">
             {corrections.map((r, i) => (
               <li key={i}>

@@ -29,36 +29,62 @@ export interface Correction {
   heard: string;
   /** One line the learner can act on. */
   hint: string;
+  /**
+   * True when the slip has a phonetic explanation that holds across moras —
+   * the whole /u/ column rounding into /o/, a vowel growing onto ん. Those are
+   * mouth problems, not memory problems, and the scheduler must treat them
+   * differently from confusing one glyph with another.
+   */
+  systematic: boolean;
 }
 
 export function correctionFor(expected: KanaCard, heardRaw: string[]): Correction | null {
   for (const raw of heardRaw) {
     const heard = moraOf(raw);
     if (!heard || heard.kana === expected.kana) continue;
-    const hint = hintFor(expected, heard);
-    if (hint) return { heard: heard.glyph, hint };
+    return { heard: heard.glyph, ...hintFor(expected, heard) };
   }
   return null;
 }
 
-function hintFor(expected: KanaCard, heard: KanaCard): string | null {
-  // /u/ heard as /o/ — う→を/お, く→こ, つ→そ, る→ろ, ゆ→よ. The most common
-  // failure in every run so far, and always the same cause.
+function hintFor(expected: KanaCard, heard: KanaCard): Omit<Correction, 'heard'> {
+  // /u/ heard as /o/ — う→を, く→こ, す→そ, ふ→ほ, む→も, る→ろ, ゆ→よ. Seven
+  // different moras, one error, in every run so far.
+  //
+  // The consonant is deliberately not required to match. つ comes back as しょ,
+  // and reading つ *as* しょ is not a mistake anyone makes — the glyphs look
+  // nothing alike. A rounded vowel that also smears the affricate is one
+  // articulation problem, not a misread glyph; the invariant across every
+  // observed case is the vowel column, so that is what the rule keys on.
   if (expected.col === 'u' && heard.col === 'o') {
-    return 'японская /u/ — без округления губ. Губы трубочкой дают /o/: растяните их, как при «ы».';
+    return {
+      hint: 'японская /u/ — без округления губ. Губы трубочкой дают /o/: растяните их, как при «ы».',
+      systematic: true,
+    };
   }
 
   // ん is one nasal sound and nothing else; «ну» adds a vowel and becomes ぬ.
   if (expected.row === 'N' && (heard.row === 'n' || heard.row === 'm')) {
-    return 'ん — один носовой звук, без гласного после него: не «ну», а тянущееся «н».';
+    return {
+      hint: 'ん — один носовой звук, без гласного после него: не «ну», а тянущееся «н».',
+      systematic: true,
+    };
   }
 
   // Russian «х» is a velar fricative and its noise sits close to /s/.
   if (expected.row === 'h' && heard.row === 's') {
-    return 'японская /h/ — лёгкий выдох, а не русское «х»: от «х» получается шум, похожий на /s/.';
+    return {
+      hint: 'японская /h/ — лёгкий выдох, а не русское «х»: от «х» получается шум, похожий на /s/.',
+      systematic: true,
+    };
   }
 
-  if (expected.row === heard.row) return `тот же ряд, другой гласный — ${heard.romaji} вместо ${expected.romaji}.`;
-  if (expected.col === heard.col) return `тот же гласный, другой согласный — ${heard.romaji} вместо ${expected.romaji}.`;
-  return null;
+  // No phonetic story — the wrong mora was read, not the right one said badly.
+  if (expected.row === heard.row) {
+    return { hint: `тот же ряд, другой гласный — ${heard.romaji} вместо ${expected.romaji}.`, systematic: false };
+  }
+  if (expected.col === heard.col) {
+    return { hint: `тот же гласный, другой согласный — ${heard.romaji} вместо ${expected.romaji}.`, systematic: false };
+  }
+  return { hint: `это ${heard.romaji}, а не ${expected.romaji}.`, systematic: false };
 }

@@ -14,6 +14,7 @@ interface Props {
 
 const QUALITY_TEXT: Record<string, string> = {
   wrong: 'услышал другую мору',
+  mispronounced: 'чтение верное — дело в произношении',
   silent: 'ответа не было',
   unplaced: 'не разобрал — скажем ещё раз',
   skipped: 'пропущено',
@@ -75,6 +76,9 @@ export function Drill({ snapshot, micLevel, showRomaji, lastResult, onSkip, onSt
           <span className="answer-why">
             {lastResult ? (QUALITY_TEXT[lastResult.quality] ?? '') : ''}
           </span>
+          {lastResult?.correction && (
+            <span className="answer-why">{lastResult.correction.hint}</span>
+          )}
         </div>
       ) : (
         showRomaji && <div className="romaji">{snapshot.current?.romaji}</div>

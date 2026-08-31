@@ -31,6 +31,13 @@ export type AnswerQuality =
   | 'correct'
   /** The recogniser heard a different, existing mora — a real reading error. */
   | 'wrong'
+  /**
+   * The right mora, said with a systematic pronunciation slip the control
+   * decoder can name — the /u/ column rounded into /o/, a vowel grown onto ん.
+   * The glyph was read correctly; the mouth was wrong. Recall is not what
+   * failed, so the schedule must not move.
+   */
+  | 'mispronounced'
   /** The learner said nothing at all. */
   | 'silent'
   /** Sound heard but not placed («[unk]»): says nothing about the learner. */
@@ -58,7 +65,7 @@ export function ratingFor(
   onsetMs: number | null,
   opts: { repeated?: boolean } = {},
 ): Grade | null {
-  if (quality === 'unplaced' || quality === 'skipped') return null;
+  if (quality === 'unplaced' || quality === 'skipped' || quality === 'mispronounced') return null;
   if (quality === 'wrong' || quality === 'silent') return Rating.Again;
   // Correct, but we never measured when speech started: treat as ordinary.
   if (onsetMs === null) return Rating.Good;
@@ -82,6 +89,8 @@ export interface CardProgress {
   avgOnsetMs: number | null;
   /** Times the recogniser refused to place the sound. Pronunciation signal. */
   unplaced: number;
+  /** Times a nameable pronunciation slip was heard on this mora. */
+  mispronounced: number;
 }
 
 export function newProgress(id: string, now: Date): CardProgress {
@@ -93,6 +102,7 @@ export function newProgress(id: string, now: Date): CardProgress {
     lastOnsetMs: null,
     avgOnsetMs: null,
     unplaced: 0,
+    mispronounced: 0,
   };
 }
 
@@ -115,6 +125,7 @@ export function applyAnswer(
   const next: CardProgress = {
     ...progress,
     unplaced: progress.unplaced + (answer.quality === 'unplaced' ? 1 : 0),
+    mispronounced: progress.mispronounced + (answer.quality === 'mispronounced' ? 1 : 0),
   };
 
   if (answer.quality === 'correct' && answer.onsetMs !== null) {

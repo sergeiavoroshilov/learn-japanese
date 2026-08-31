@@ -1,4 +1,5 @@
 import { expectedFor, judge, type MatchVerdict } from './match';
+import { correctionFor } from './pronounce';
 import type { CardOutcome } from './session';
 import type { AnswerQuality } from './srs';
 
@@ -16,6 +17,11 @@ export interface AnswerFacts {
   soundHeard: boolean;
   /** The answer was only accepted after an unplaced first attempt. */
   repeated: boolean;
+  /**
+   * The wrong mora that came back is explained by a pronunciation rule rather
+   * than by having read the wrong glyph.
+   */
+  systematicSlip: boolean;
 }
 
 /**
@@ -38,12 +44,18 @@ export function factsFrom(outcome: CardOutcome): AnswerFacts {
     .filter(offTarget)
     .map((v) => v.normalized);
 
+  const correction = correctionFor(outcome.card, [
+    ...outcome.witnessHeard,
+    ...outcome.hypotheses.filter((h) => offTarget(h.verdict)).map((h) => h.transcript),
+  ]);
+
   return {
     status: outcome.status,
     onsetMs: outcome.onsetMs,
     heard,
     soundHeard: outcome.hypotheses.length > 0 || outcome.witnessHeard.length > 0,
     repeated: outcome.hypotheses.some((h) => h.verdict.normalized === ''),
+    systematicSlip: correction?.systematic === true,
   };
 }
 
@@ -56,8 +68,10 @@ export function classify(facts: AnswerFacts): AnswerQuality {
   if (facts.status === 'match' || facts.status === 'late') return 'correct';
   if (facts.status === 'skipped') return 'skipped';
 
-  // A different, existing mora came back — that is a misreading.
-  if (facts.heard.length > 0) return 'wrong';
+  // A different mora came back. If a pronunciation rule explains it, the
+  // glyph was read right and only said wrong — which the schedule must not
+  // punish, any more than it punishes a sound the decoder could not place.
+  if (facts.heard.length > 0) return facts.systematicSlip ? 'mispronounced' : 'wrong';
   // Sound arrived and nothing could be made of it: the decoder's problem.
   if (facts.soundHeard) return 'unplaced';
   // The decoder said nothing. The microphone's own VAD decides whether that
