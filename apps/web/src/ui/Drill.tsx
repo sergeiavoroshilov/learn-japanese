@@ -100,8 +100,12 @@ export function Drill({ snapshot, micLevel, showRomaji, lastResult, onSkip, onSt
       </div>
 
       <div className="stage-actions">
-        <button onClick={onSkip}>Не помню (Space)</button>
-        <button onClick={onStop}>Закончить (Esc)</button>
+        <button onClick={onSkip}>
+          Не помню<span className="key"> (Space)</span>
+        </button>
+        <button onClick={onStop}>
+          Закончить<span className="key"> (Esc)</span>
+        </button>
       </div>
     </section>
   );

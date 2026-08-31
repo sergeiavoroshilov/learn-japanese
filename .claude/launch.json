@@ -4,8 +4,21 @@
     {
       "name": "web",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 5173
+    },
+    {
+      "name": "web-https",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": [
+        "run",
+        "dev:https"
+      ],
+      "port": 5173,
+      "url": "https://localhost:5173"
     }
   ]
 }

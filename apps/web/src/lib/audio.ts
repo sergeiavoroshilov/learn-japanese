@@ -22,6 +22,19 @@ export class MicSource {
     this.ctx = preferredSampleRate
       ? new AudioContext({ sampleRate: preferredSampleRate })
       : new AudioContext();
+
+    // iOS Safari hands back a suspended context, and awaiting getUserMedia
+    // above has already spent the user gesture that would have started it.
+    // A suspended context never fires onaudioprocess: the mic meter sits at
+    // zero, the decoder is fed nothing, and the drill looks broken for no
+    // visible reason. Resume explicitly, and say so if it refuses.
+    if (this.ctx.state === 'suspended') await this.ctx.resume();
+    if (this.ctx.state !== 'running') {
+      throw new Error(
+        'Браузер не запустил обработку звука — нажмите «Начать сессию» ещё раз',
+      );
+    }
+
     this.source = this.ctx.createMediaStreamSource(this.stream);
   }
 
