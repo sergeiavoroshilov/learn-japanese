@@ -1,5 +1,6 @@
 import { correctionFor } from '../lib/pronounce';
 import type { SessionSnapshot } from '../lib/session';
+import type { WakeLockState } from '../lib/wakelock';
 import type { CardResult } from './Trainer';
 import { ms } from './format';
 
@@ -7,6 +8,7 @@ interface Props {
   snapshot: SessionSnapshot;
   micLevel: number;
   showRomaji: boolean;
+  wakeLock: WakeLockState;
   lastResult: CardResult | null;
   onSkip(): void;
   onStop(): void;
@@ -20,7 +22,15 @@ const QUALITY_TEXT: Record<string, string> = {
   skipped: 'пропущено',
 };
 
-export function Drill({ snapshot, micLevel, showRomaji, lastResult, onSkip, onStop }: Props) {
+export function Drill({
+  snapshot,
+  micLevel,
+  showRomaji,
+  wakeLock,
+  lastResult,
+  onSkip,
+  onStop,
+}: Props) {
   const paused = snapshot.lastStatus !== null;
   /**
    * The decoder answered «[unk]»: it heard something and could not place it.
@@ -66,6 +76,11 @@ export function Drill({ snapshot, micLevel, showRomaji, lastResult, onSkip, onSt
           />
         </div>
       </div>
+
+      {/* Only worth saying when the screen really will go dark mid-answer. */}
+      {(wakeLock === 'unsupported' || wakeLock === 'refused') && (
+        <div className="dim-warning">экран может погаснуть — браузер не даёт его удержать</div>
+      )}
 
       {snapshot.error && <div className="banner error">Ошибка: {snapshot.error}</div>}
 

@@ -210,3 +210,4 @@ tr.skipped td { color: var(--muted); }
   /* No keyboard to press Space with. */
   .key { display: none; }
 }
+.dim-warning { color: var(--warn); font-size: 12px; text-align: center; }

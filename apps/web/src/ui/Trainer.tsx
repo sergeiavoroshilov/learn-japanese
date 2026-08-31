@@ -7,6 +7,7 @@ import { planSession, type SessionPlan } from '../lib/plan';
 import { DrillSession, type Engine, type SessionSnapshot } from '../lib/session';
 import { applyAnswer, isNew, type AnswerQuality, type CardProgress } from '../lib/srs';
 import { ProgressStore, type Settings } from '../lib/store';
+import { ScreenWakeLock, type WakeLockState } from '../lib/wakelock';
 import { Drill } from './Drill';
 import { Home } from './Home';
 import { Summary } from './Summary';
@@ -66,6 +67,9 @@ export function Trainer() {
 
   const sessionRef = useRef<DrillSession | null>(null);
   const requeuesRef = useRef(new Map<string, number>());
+  const wakeLockRef = useRef<ScreenWakeLock | null>(null);
+  wakeLockRef.current ??= new ScreenWakeLock();
+  const [wakeLock, setWakeLock] = useState<WakeLockState>('idle');
 
   const progressFor = useCallback(
     (id: string): CardProgress => store.progressFor(id, new Date()),
@@ -183,6 +187,21 @@ export function Trainer() {
     }
   }, [snapshot.status, snapshot.error, screen]);
 
+  /**
+   * A drill is minutes of talking at the screen without touching it, which is
+   * exactly what a phone treats as idle. Hold the screen awake for as long as
+   * the drill runs, and no longer.
+   */
+  useEffect(() => {
+    const lock = wakeLockRef.current!;
+    if (screen !== 'drill') {
+      void lock.release().then(() => setWakeLock(lock.status));
+      return;
+    }
+    void lock.hold().then(() => setWakeLock(lock.status));
+    return () => void lock.release();
+  }, [screen]);
+
   // Mic meter, so a dead microphone is obvious before blaming the recogniser.
   useEffect(() => {
     if (screen !== 'drill') return;
@@ -230,6 +249,7 @@ export function Trainer() {
           snapshot={snapshot}
           micLevel={micLevel}
           showRomaji={settings.showRomaji}
+          wakeLock={wakeLock}
           lastResult={lastResult}
           onSkip={() => sessionRef.current?.skip()}
           onStop={stop}

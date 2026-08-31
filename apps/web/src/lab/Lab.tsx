@@ -10,6 +10,7 @@ import {
 import { KanaGrid } from './KanaGrid';
 import { grammarFor } from '../lib/match';
 import { correctionFor } from '../lib/pronounce';
+import { ScreenWakeLock } from '../lib/wakelock';
 import { isWebSpeechSupported, type MatchRule } from '../lib/recognizer';
 import { DrillSession, type Engine, type SessionSnapshot } from '../lib/session';
 import { buildReport, summarize } from '../lib/stats';
@@ -67,6 +68,8 @@ export function Lab() {
   const [startedAt, setStartedAt] = useState<string>('');
 
   const sessionRef = useRef<DrillSession | null>(null);
+  const wakeLockRef = useRef<ScreenWakeLock | null>(null);
+  wakeLockRef.current ??= new ScreenWakeLock();
 
   const mock = useMemo(() => new URLSearchParams(window.location.search).has('mock'), []);
   const activeEngine: Engine = mock ? 'mock' : engine;
@@ -147,6 +150,17 @@ export function Lab() {
   ]);
 
   const stop = useCallback(() => sessionRef.current?.stop(), []);
+
+  // A measurement run must not be cut short by the phone locking itself.
+  useEffect(() => {
+    const lock = wakeLockRef.current!;
+    if (!running) {
+      void lock.release();
+      return;
+    }
+    void lock.hold();
+    return () => void lock.release();
+  }, [running]);
 
   // Mic meter, so a dead microphone is obvious before blaming the engine.
   useEffect(() => {
