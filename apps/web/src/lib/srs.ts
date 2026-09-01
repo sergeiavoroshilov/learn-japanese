@@ -62,15 +62,18 @@ export const LATENCY_GOOD_MS = 2000;
 export function ratingFor(
   quality: AnswerQuality,
   onsetMs: number | null,
-  opts: { repeated?: boolean } = {},
+  opts: { repeated?: boolean; assisted?: boolean } = {},
 ): Grade | null {
   if (quality === 'unplaced' || quality === 'skipped' || quality === 'mispronounced') return null;
   if (quality === 'wrong' || quality === 'silent') return Rating.Again;
   // Correct, but we never measured when speech started: treat as ordinary.
   if (onsetMs === null) return Rating.Good;
-  // Had to say it twice — the recogniser's fault, but it also means we no
-  // longer know how fluent the answer really was. Never promote to Easy.
-  if (onsetMs < LATENCY_EASY_MS) return opts.repeated ? Rating.Good : Rating.Easy;
+  // «Easy» has to be earned by recall. It is not recall when the reading was
+  // on screen — a card still being taught shows it, so a fast answer measures
+  // reading speed — nor when the answer had to be said twice, which leaves us
+  // no idea how fluent the first attempt was.
+  const trusted = !opts.repeated && !opts.assisted;
+  if (onsetMs < LATENCY_EASY_MS) return trusted ? Rating.Easy : Rating.Good;
   if (onsetMs < LATENCY_GOOD_MS) return Rating.Good;
   return Rating.Hard;
 }
@@ -121,6 +124,8 @@ export function applyAnswer(
     quality: AnswerQuality;
     onsetMs: number | null;
     repeated?: boolean;
+    /** The reading was on screen while this was answered. */
+    assisted?: boolean;
     /**
      * A second look at the same card inside one session. It still measures
      * latency and still counts pronunciation slips, but it must not reach
@@ -135,7 +140,10 @@ export function applyAnswer(
 ): Applied {
   const rating = answer.practice
     ? null
-    : ratingFor(answer.quality, answer.onsetMs, { repeated: answer.repeated });
+    : ratingFor(answer.quality, answer.onsetMs, {
+        repeated: answer.repeated,
+        assisted: answer.assisted,
+      });
   const next: CardProgress = {
     ...progress,
     unplaced: progress.unplaced + (answer.quality === 'unplaced' ? 1 : 0),

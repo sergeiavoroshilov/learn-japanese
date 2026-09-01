@@ -52,9 +52,13 @@ describe('planSession', () => {
     expect([...glyphs].sort()).toEqual(['あ', 'い', 'う']);
   });
 
-  test('nothing due and nothing new leaves an empty session', () => {
+  test('nothing due and nothing new still gives a session, all practice', () => {
     const states = Object.fromEntries(HIRA.map((c) => [c.id, scheduled(c.id)]));
-    expect(plan(states).cards).toHaveLength(0);
+    const built = plan(states);
+    expect(built.due).toBe(0);
+    expect(built.fresh).toBe(0);
+    expect(built.practice).toBe(20);
+    expect(built.scheduled.size).toBe(0);
   });
 
   test('the most overdue cards come first when the backlog is bigger than the session', () => {
@@ -93,10 +97,17 @@ describe('planSession', () => {
     expect(built.cards.some((c) => c.voiceOov)).toBe(false);
   });
 
-  test('free practice drills what is closest to due when nothing is', () => {
-    const states = Object.fromEntries(HIRA.map((c) => [c.id, scheduled(c.id)]));
-    expect(plan(states, { size: 3 }).cards).toHaveLength(0);
-    expect(plan(states, { size: 3, mode: 'free' }).cards).toHaveLength(3);
+  test('practice takes the cards nearest to falling due', () => {
+    const states: Record<string, CardProgress> = {};
+    HIRA.forEach((c) => (states[c.id] = scheduled(c.id)));
+    // Push one card far out; it must be the last thing practised, not the first.
+    const far = HIRA[0]!;
+    states[far.id] = {
+      ...states[far.id]!,
+      fsrs: { ...states[far.id]!.fsrs, due: new Date(NOW.getTime() + 400 * 86_400_000) },
+    };
+    const built = plan(states, { size: 3 });
+    expect(built.cards.some((c) => c.id === far.id)).toBe(false);
   });
 });
 
@@ -117,18 +128,54 @@ describe('session length', () => {
     }
   });
 
-  test('reviews do not repeat — asking them seven times teaches nothing', () => {
+  test('reviews do not repeat, but the room goes to practice', () => {
     const states: Record<string, CardProgress> = {};
     HIRA.slice(0, 3).forEach((c) => (states[c.id] = overdue(c.id, 1)));
     HIRA.slice(3).forEach((c) => (states[c.id] = scheduled(c.id)));
     const built = plan(states, { size: 20, newLimit: 5 });
-    expect(built.cards).toHaveLength(3);
     expect(built.due).toBe(3);
+    expect(built.practice).toBe(17);
+    // Every card distinct: no review is asked twice.
+    expect(new Set(built.cards.map((c) => c.id)).size).toBe(20);
+    // Only what the scheduler asked for counts towards the schedule.
+    expect(built.scheduled.size).toBe(3);
   });
 
   test('one new glyph still fills a session', () => {
     const built = plan({}, { size: 8, newLimit: 1 });
     expect(built.cards).toHaveLength(8);
     expect(new Set(built.cards.map((c) => c.id)).size).toBe(1);
+  });
+});
+
+describe('practice fills the idle days', () => {
+  test('glyphs learned yesterday come back today, nearest to due first', () => {
+    // Five cards answered and scheduled days out. Without practice the next
+    // session would be five brand-new glyphs and nothing else, which is what
+    // «I keep drilling five new ones in circles» looks like.
+    const states: Record<string, CardProgress> = {};
+    HIRA.slice(0, 5).forEach((c) => (states[c.id] = scheduled(c.id)));
+    const built = plan(states, { size: 20, newLimit: 5 });
+    expect(built.due).toBe(0);
+    expect(built.fresh).toBe(5);
+    expect(built.practice).toBe(5);
+    // Ten distinct glyphs, padded to the session length by repeating the new
+    // ones — which is the point of them being new.
+    expect(new Set(built.cards.map((c) => c.id)).size).toBe(10);
+    expect(built.cards).toHaveLength(20);
+  });
+
+  test('practice does not count towards the schedule', () => {
+    const states: Record<string, CardProgress> = {};
+    HIRA.slice(0, 5).forEach((c) => (states[c.id] = scheduled(c.id)));
+    const built = plan(states, { size: 20, newLimit: 0 });
+    expect(built.scheduled.size).toBe(0);
+    expect(built.cards).toHaveLength(5);
+  });
+
+  test('the very first session has nothing to practise and repeats instead', () => {
+    const built = plan({}, { size: 20, newLimit: 5 });
+    expect(built.practice).toBe(0);
+    expect(built.cards).toHaveLength(20);
   });
 });

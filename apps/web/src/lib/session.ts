@@ -408,7 +408,9 @@ export class DrillSession {
       statusText: this.statusText,
       cardIndex: this.cardIndex,
       totalCards: this.queue.length,
-      remaining: Math.max(0, this.queue.length - this.cardIndex - 1),
+      // Clamped at zero: before the first card there is no «current» to
+      // exclude, and the counter would read one too many.
+      remaining: Math.max(0, this.queue.length - Math.max(0, this.cardIndex) - 1),
       current: this.queue[this.cardIndex] ?? null,
       lastStatus: this.lastStatus,
       awaitingContinue: this.awaitingContinue,

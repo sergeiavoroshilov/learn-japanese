@@ -11,7 +11,7 @@ interface Props {
   mock: boolean;
   /** Why the previous attempt to start a session failed. */
   failure: string | null;
-  onStart(mode?: 'due' | 'free'): void;
+  onStart(): void;
   onStats(): void;
   onImported(): void;
 }
@@ -38,6 +38,12 @@ export function Home({
     current?.fresh ?? 0,
   );
   const nothingToDo = plannedDue === 0 && plannedNew === 0;
+  const seen = state.reduce((n, l) => n + l.learned + l.learning, 0);
+  /** The rest of the session goes to glyphs already met but not yet due. */
+  const plannedPractice = Math.max(
+    0,
+    Math.min(settings.sessionSize - plannedDue - plannedNew, seen - plannedDue),
+  );
   const secure = window.isSecureContext || mock;
 
   const backup = async () => {
@@ -83,17 +89,18 @@ export function Home({
       <div className="block">
         {nothingToDo ? (
           <>
-            <button className="primary" onClick={() => onStart('free')} disabled={!current}>
+            <button className="primary" onClick={onStart} disabled={seen === 0}>
               Потренироваться
             </button>
             <p className="note-inline">
-              По графику сегодня ничего не нужно. Лишний повтор не вредит — FSRS
-              учтёт, что символ спросили раньше срока.
+              По графику сегодня ничего не нужно — будет закрепление того, что
+              уже знакомо. Оно не двигает график: интервал это срок, к которому
+              символ надо вспомнить, а не карантин до него.
             </p>
           </>
         ) : (
           <>
-            <button className="primary" onClick={() => onStart('due')}>
+            <button className="primary" onClick={onStart}>
               Начать
             </button>
             <p className="note-inline">
@@ -102,11 +109,9 @@ export function Home({
               {[
                 plannedDue > 0 ? `${plannedDue} на повторение` : null,
                 plannedNew > 0
-                  ? `${plannedNew} новых${current ? ` из «${current.level.label}»` : ''}` +
-                    (plannedDue + plannedNew < settings.sessionSize
-                      ? `, с повторами внутри сессии — ${settings.sessionSize} карточек`
-                      : '')
+                  ? `${plannedNew} новых${current ? ` из «${current.level.label}»` : ''}`
                   : null,
+                plannedPractice > 0 ? `${plannedPractice} на закрепление` : null,
               ]
                 .filter(Boolean)
                 .join(' · ')}

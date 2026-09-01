@@ -80,6 +80,8 @@ export function Trainer() {
   const requeuesRef = useRef(new Map<string, number>());
   /** Cards already sent to the scheduler in this session. */
   const gradedRef = useRef(new Set<string>());
+  /** Cards this session was actually asked for, as opposed to practice. */
+  const scheduledRef = useRef(new Set<string>());
   /**
    * Cards still being taught rather than tested. Frozen when the session
    * starts: a card must not stop showing its reading halfway through, in the
@@ -110,20 +112,20 @@ export function Trainer() {
     [progressFor],
   );
 
-  const start = useCallback((mode: 'due' | 'free' = 'due') => {
+  const start = useCallback(() => {
     const now = new Date();
     const look = (id: string) => store.progressFor(id, now);
     const built = planSession(curriculum(look, now), look, now, {
       size: settings.sessionSize,
       newLimit: settings.newPerSession,
       excludeOov: engine === 'vosk',
-      mode,
     });
     if (built.cards.length === 0) return;
 
     sessionRef.current?.stop();
     requeuesRef.current = new Map();
     gradedRef.current = new Set();
+    scheduledRef.current = built.scheduled;
     setResults([]);
     setPlan(built);
     setFailure(null);
@@ -165,11 +167,25 @@ export function Trainer() {
         // the session is practice: it sharpens the glyph and is measured,
         // but FSRS must not read «answered right four times in a minute» as
         // a memory that has held for a minute.
-        const practice = gradedRef.current.has(outcome.card.id);
+        //
+        // Cards added to fill the session were not due, and getting one of
+        // those right says little — it was never in doubt. Getting one wrong
+        // says a great deal: the interval was too long. So an early success
+        // leaves the schedule alone and an early failure does not.
+        const seenBefore = gradedRef.current.has(outcome.card.id);
+        const asked = scheduledRef.current.has(outcome.card.id);
+        const failed = quality === 'wrong' || quality === 'silent';
+        const practice = seenBefore || (!asked && !failed);
         gradedRef.current.add(outcome.card.id);
         const applied = applyAnswer(
           before,
-          { quality, onsetMs: outcome.onsetMs, repeated: facts.repeated, practice },
+          {
+            quality,
+            onsetMs: outcome.onsetMs,
+            repeated: facts.repeated,
+            assisted: teaching.has(outcome.card.id),
+            practice,
+          },
           at,
         );
         store.record(applied.progress, {
@@ -310,7 +326,7 @@ export function Trainer() {
         <Summary
           results={results}
           plan={plan}
-          onAgain={() => start('due')}
+          onAgain={start}
           onHome={() => {
             setSnapshot(IDLE);
             setScreen('home');
