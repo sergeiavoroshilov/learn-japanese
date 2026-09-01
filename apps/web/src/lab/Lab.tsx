@@ -30,6 +30,7 @@ const IDLE: SessionSnapshot = {
   remaining: 0,
   current: null,
   lastStatus: null,
+  awaitingContinue: false,
   liveHypotheses: [],
   liveWitness: [],
   liveOnsetMs: null,

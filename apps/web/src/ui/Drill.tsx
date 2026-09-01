@@ -13,6 +13,7 @@ interface Props {
   /** Cards the learner has barely met, which are still being taught. */
   teaching: Set<string>;
   lastResult: CardResult | null;
+  onContinue(): void;
   onSkip(): void;
   onStop(): void;
 }
@@ -32,6 +33,7 @@ export function Drill({
   wakeLock,
   teaching,
   lastResult,
+  onContinue,
   onSkip,
   onStop,
 }: Props) {
@@ -71,8 +73,10 @@ export function Drill({
     <section className={`stage ${paused ? (snapshot.lastStatus ?? '') : ''}`}>
       <div className="stage-top">
         <span className="counter">осталось {snapshot.remaining + 1}</span>
-        <span className={snapshot.listening ? 'mic on' : 'mic'}>
-          {snapshot.listening ? 'слушаю' : 'пауза'}
+        <span className={snapshot.listening && !snapshot.awaitingContinue ? 'mic on' : 'mic'}>
+          {/* The engine is still on while the drill holds, but the card is
+              disarmed and nothing said now counts — «слушаю» would be a lie. */}
+          {snapshot.listening && !snapshot.awaitingContinue ? 'слушаю' : 'пауза'}
         </span>
         <div className="meter">
           <div
@@ -116,9 +120,17 @@ export function Drill({
       </div>
 
       <div className="stage-actions">
-        <button onClick={onSkip}>
-          Не помню<span className="key"> (Space)</span>
-        </button>
+        {snapshot.awaitingContinue ? (
+          // Shown on the desktop too, not only where there is no keyboard:
+          // the hint alone leaves you wondering whether anything is expected.
+          <button className="primary" onClick={onContinue} autoFocus>
+            Продолжить<span className="key"> (Space)</span>
+          </button>
+        ) : (
+          <button onClick={onSkip}>
+            Не помню<span className="key"> (Space)</span>
+          </button>
+        )}
         <button onClick={onStop}>
           Закончить<span className="key"> (Esc)</span>
         </button>

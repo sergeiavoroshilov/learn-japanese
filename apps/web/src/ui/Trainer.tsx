@@ -37,6 +37,7 @@ const IDLE: SessionSnapshot = {
   remaining: 0,
   current: null,
   lastStatus: null,
+  awaitingContinue: false,
   liveHypotheses: [],
   liveWitness: [],
   liveOnsetMs: null,
@@ -151,6 +152,8 @@ export function Trainer() {
       witness: true,
       acceptFromWitness: true,
       flushOnSilence: true,
+      // Stop on a miss and wait: the correction is the point of that moment.
+      pauseOnMiss: true,
       onUpdate: setSnapshot,
       onOutcome: (outcome) => {
         const at = new Date();
@@ -251,15 +254,18 @@ export function Trainer() {
   useEffect(() => {
     if (screen !== 'drill') return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
+      if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
-        sessionRef.current?.skip();
+        // The same key does both, because at any moment only one of them is
+        // possible: you cannot give up on a card that is already finished.
+        if (snapshot.awaitingContinue) sessionRef.current?.resume();
+        else if (e.code === 'Space') sessionRef.current?.skip();
       }
       if (e.code === 'Escape') stop();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [screen, stop]);
+  }, [screen, stop, snapshot.awaitingContinue]);
 
   const lastResult = results.length > 0 ? results[results.length - 1]! : null;
 
@@ -290,6 +296,7 @@ export function Trainer() {
           wakeLock={wakeLock}
           teaching={teaching}
           lastResult={lastResult}
+          onContinue={() => sessionRef.current?.resume()}
           onSkip={() => sessionRef.current?.skip()}
           onStop={stop}
         />

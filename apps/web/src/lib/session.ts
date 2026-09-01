@@ -59,6 +59,12 @@ export interface SessionSnapshot {
   current: DrillCard | null;
   /** Set briefly after a match so the UI can flash green. */
   lastStatus: CardStatus | null;
+  /**
+   * The card is finished and wrong, and the drill is holding still until the
+   * learner says to go on. The correction is the most useful thing on the
+   * screen and it must not be read against a clock.
+   */
+  awaitingContinue: boolean;
   liveHypotheses: Hypothesis[];
   /**
    * What the deck-wide control decoder has said about the card on screen.
@@ -85,6 +91,12 @@ export interface SessionOptions {
    * is the only chance to learn from the miss.
    */
   reviewPauseMs?: number;
+  /**
+   * Wait for the learner instead of that pause. A correction is worth reading
+   * and nobody reads at a fixed 1400 ms. Off in the measurement harness,
+   * where a run has to stay comparable with the ones before it.
+   */
+  pauseOnMiss?: boolean;
   engine: Engine;
   /** Commit the decoder as soon as our VAD hears the answer end. */
   flushOnSilence?: boolean;
@@ -133,6 +145,7 @@ export class DrillSession {
   private liveWitness: string[] = [];
   private lastStatus: CardStatus | null = null;
   private listening = false;
+  private awaitingContinue = false;
   private error: string | null = null;
 
   private shownAt = 0;
@@ -243,8 +256,15 @@ export class DrillSession {
 
   /** User gave up on the current card. */
   skip(): void {
-    if (this.status !== 'running') return;
+    if (this.status !== 'running' || this.awaitingContinue) return;
     this.finishCard('skipped', null);
+  }
+
+  /** The learner has read the correction and wants the next card. */
+  resume(): void {
+    if (!this.awaitingContinue) return;
+    this.awaitingContinue = false;
+    this.nextCard();
   }
 
   stop(): void {
@@ -253,6 +273,7 @@ export class DrillSession {
     this.detector.stop();
     this.mic?.stop();
     this.mic = null;
+    this.awaitingContinue = false;
     if (this.status === 'running' || this.status === 'starting') {
       this.status = this.outcomes.length > 0 ? 'done' : 'idle';
     }
@@ -288,6 +309,7 @@ export class DrillSession {
     this.liveSpeechMs = null;
     this.liveWitness = [];
     this.lastStatus = null;
+    this.awaitingContinue = false;
     this.shownAt = performance.now();
 
     this.detector.arm((onsetMs) => {
@@ -331,9 +353,13 @@ export class DrillSession {
       },
     ];
     this.lastStatus = status;
+    // Hold before the outcome goes out, so the UI never renders a finished
+    // wrong card without its «continue» affordance.
+    this.awaitingContinue = status !== 'match' && this.opts.pauseOnMiss === true;
     this.emit();
     this.opts.onOutcome?.(this.outcomes[this.outcomes.length - 1]!);
 
+    if (this.awaitingContinue) return;
     this.advanceTimer = window.setTimeout(
       () => this.nextCard(),
       status === 'match' ? this.interCardMs : this.reviewPauseMs,
@@ -385,6 +411,7 @@ export class DrillSession {
       remaining: Math.max(0, this.queue.length - this.cardIndex - 1),
       current: this.queue[this.cardIndex] ?? null,
       lastStatus: this.lastStatus,
+      awaitingContinue: this.awaitingContinue,
       liveHypotheses: this.liveHypotheses,
       liveWitness: this.liveWitness,
       liveOnsetMs: this.liveOnsetMs,
