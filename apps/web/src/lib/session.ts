@@ -156,6 +156,13 @@ export class DrillSession {
    * nowhere: it was read off the screen, not recalled.
    */
   private repeating = false;
+  /**
+   * The card is finished and the next one has not appeared yet. Nothing may
+   * be recorded against it in that gap — without this, a space bar pressed
+   * during the flash after a match adds a second, «skipped» outcome to a card
+   * that was answered correctly.
+   */
+  private settled = false;
   private error: string | null = null;
 
   private shownAt = 0;
@@ -176,7 +183,7 @@ export class DrillSession {
         this.liveHypotheses = [...this.liveHypotheses, h];
         this.emit();
       },
-      onMatch: (h) => (this.repeating ? this.resume() : this.finishCard('match', h)),
+      onMatch: (h) => (this.repeating ? this.resume(true) : this.finishCard('match', h)),
       onLateMatch: (h) => this.recordLateMatch(h),
       onWitness: (transcript) => {
         this.liveWitness = [...this.liveWitness, transcript];
@@ -266,19 +273,32 @@ export class DrillSession {
 
   /** User gave up on the current card. */
   skip(): void {
-    if (this.status !== 'running' || this.awaitingContinue) return;
+    if (this.status !== 'running' || this.awaitingContinue || this.settled) return;
     this.finishCard('skipped', null);
   }
 
-  /** The learner has read the correction and wants the next card. */
-  resume(): void {
+  /**
+   * The learner has read the correction and wants the next card.
+   *
+   * @param matched they said the reading back rather than reaching for a key,
+   * which earns the same green flash as any other correct answer — it was
+   * correct, and it should look it.
+   */
+  resume(matched = false): void {
     if (!this.awaitingContinue) return;
     this.awaitingContinue = false;
     this.repeating = false;
     this.recognizer.disarm();
     this.detector.disarm();
     this.recognizer.flush?.();
-    this.nextCard();
+
+    if (!matched) {
+      this.nextCard();
+      return;
+    }
+    this.lastStatus = 'match';
+    this.emit();
+    this.advanceTimer = window.setTimeout(() => this.nextCard(), this.interCardMs);
   }
 
   stop(): void {
@@ -288,6 +308,7 @@ export class DrillSession {
     this.mic?.stop();
     this.mic = null;
     this.awaitingContinue = false;
+    this.repeating = false;
     if (this.status === 'running' || this.status === 'starting') {
       this.status = this.outcomes.length > 0 ? 'done' : 'idle';
     }
@@ -325,6 +346,7 @@ export class DrillSession {
     this.lastStatus = null;
     this.awaitingContinue = false;
     this.repeating = false;
+    this.settled = false;
     this.shownAt = performance.now();
 
     this.detector.arm((onsetMs) => {
@@ -339,7 +361,8 @@ export class DrillSession {
 
   private finishCard(status: CardStatus, match: Hypothesis | null): void {
     const card = this.queue[this.cardIndex];
-    if (!card || this.status !== 'running') return;
+    if (!card || this.status !== 'running' || this.settled) return;
+    this.settled = true;
 
     this.clearTimers();
     this.recognizer.disarm();
