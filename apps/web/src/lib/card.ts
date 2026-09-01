@@ -18,10 +18,21 @@ export interface DrillCard {
   readingsShort: string[];
   /** What may be typed in keyboard mode. */
   typed: string[];
+  /** What kind of thing is on the card, which decides how help is shown. */
+  kind: 'kana' | 'word' | 'kanji';
+  /**
+   * The reading in kana — furigana. Empty when the glyph *is* kana and reads
+   * as itself; for a kanji this is the thing a learner most needs to see.
+   */
+  reading: string;
+  /** The reading in Latin letters. */
+  romaji: string;
+  /** The reading in Cyrillic, Polivanov. */
+  kiriji: string;
   /** The answer key shown after a miss. */
   answer: string;
-  /** A second line under it — meanings, for kanji. */
-  note?: string;
+  /** One main meaning and the lesser ones, for kanji and words. */
+  meaning?: { primary: string; extra: string[] };
   /** Which level this card belongs to. */
   levelId: string;
   /** Gojūon coordinates. Kana only; kanji sit in no table. */

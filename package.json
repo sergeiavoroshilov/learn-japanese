@@ -13,7 +13,9 @@
     "test": "bun test",
     "fetch:model": "./scripts/fetch-vosk-model.sh",
     "lexicon": "./scripts/lexicon-forms.sh",
-    "kanji": "./scripts/kanji-data.sh"
+    "kanji": "./scripts/kanji-data.sh",
+    "words": "./scripts/words-data.sh",
+    "check:words": "./scripts/check-words.sh"
   },
   "devDependencies": {
     "@types/bun": "^1.4.0",

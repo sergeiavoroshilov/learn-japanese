@@ -1,5 +1,6 @@
 import { toKatakana } from 'wanakana';
 import type { DrillCard } from './card';
+import { toKiriji } from './kiriji';
 import { LEXICON_FORMS } from './lexicon';
 
 export type KanaScript = 'hiragana' | 'katakana';
@@ -133,6 +134,10 @@ function buildGrid(script: KanaScript, group: KanaGroup): DeckGrid {
           readings: forms,
           readingsShort: [kana],
           typed: [romaji, ...alt],
+          kind: 'kana',
+          // The glyph already is the reading; repeating it would say nothing.
+          reading: '',
+          kiriji: toKiriji(kana),
           answer: romaji,
           levelId: `${prefix}-${group}`,
           voiceOov: VOICE_OOV_KANA.includes(kana) || undefined,

@@ -25,18 +25,36 @@ function learnLevel(states: Record<string, CardProgress>, index: number, share =
 }
 
 describe('curriculum', () => {
-  test('is ordered kana first, then kanji by JLPT level', () => {
+  test('is ordered letters, then words in them, then kanji by JLPT level', () => {
     expect(LEVELS.map((l) => l.id)).toEqual([
       'hira-basic',
       'hira-dakuten',
       'hira-youon',
+      'hira-words',
       'kata-basic',
       'kata-dakuten',
       'kata-youon',
+      'kata-words',
       'kanji-n5',
       'kanji-n4',
       'kanji-n3',
     ]);
+  });
+
+  test('words come straight after the letters that spell them', () => {
+    const words = LEVELS.find((l) => l.id === 'hira-words')!;
+    expect(words.cards.length).toBeGreaterThan(20);
+    // A kana word is read exactly as written: the glyph is the answer.
+    expect(words.cards.every((c) => c.readings[0] === c.glyph)).toBe(true);
+    expect(words.cards.every((c) => c.meaning !== undefined)).toBe(true);
+  });
+
+  test('a kanji card carries its reading in kana, in Latin and in Cyrillic', () => {
+    const hi = LEVELS.find((l) => l.id === 'kanji-n5')!.cards.find((c) => c.glyph === '日')!;
+    expect(hi.reading).toContain('にち');
+    expect(hi.romaji).toContain('nichi');
+    expect(hi.kiriji).toContain('нити');
+    expect(hi.meaning?.primary).toBe('Japan');
   });
 
   test('kanji are ordered by how often they appear in print', () => {

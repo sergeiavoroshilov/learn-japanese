@@ -84,7 +84,7 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
           <ul className="corrections">
             {corrections.map((r, i) => (
               <li key={i}>
-                {r.card.glyph} ({r.card.answer}) — услышано «{r.correction!.heard}»:{' '}
+                {r.card.glyph} ({r.card.kiriji}) — услышано «{r.correction!.heard}»:{' '}
                 {r.correction!.hint}
               </li>
             ))}

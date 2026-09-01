@@ -254,3 +254,12 @@ tr.miss td { color: var(--warn); }
   /* No keyboard to press Space with. */
   .key { display: none; }
 }
+
+/* the reading, shown while a card is still being taught */
+.help { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
+.help-reading { font-size: 30px; line-height: 1.2; }
+.help-latin { font-size: 17px; letter-spacing: 0.04em; color: var(--muted); }
+.help-sep { opacity: 0.5; }
+.help-meaning { font-size: 15px; max-width: 44ch; }
+.help-extra { color: var(--muted); font-size: 14px; }
+.help.missed .help-reading, .help.missed .help-latin { color: var(--warn); }

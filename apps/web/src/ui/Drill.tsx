@@ -1,3 +1,4 @@
+import type { DrillCard } from '../lib/card';
 import { correctionFor } from '../lib/pronounce';
 import type { SessionSnapshot } from '../lib/session';
 import type { WakeLockState } from '../lib/wakelock';
@@ -9,6 +10,8 @@ interface Props {
   micLevel: number;
   showRomaji: boolean;
   wakeLock: WakeLockState;
+  /** Cards the learner has barely met, which are still being taught. */
+  teaching: Set<string>;
   lastResult: CardResult | null;
   onSkip(): void;
   onStop(): void;
@@ -27,35 +30,37 @@ export function Drill({
   micLevel,
   showRomaji,
   wakeLock,
+  teaching,
   lastResult,
   onSkip,
   onStop,
 }: Props) {
   const paused = snapshot.lastStatus !== null;
-  /**
-   * The decoder answered «[unk]»: it heard something and could not place it.
-   * Saying it again is the useful move, and silence gives the learner no clue.
-   */
   const notPlaced =
     !paused &&
     snapshot.liveHypotheses.length > 0 &&
     snapshot.liveHypotheses.every((h) => h.verdict.normalized === '');
 
-  /**
-   * What the control decoder heard instead, turned into something to do about
-   * it. «услышал を, японская /u/ — без округления губ» is a lesson;
-   * «не расслышал» is a dead end.
-   */
   const correction = snapshot.current
     ? correctionFor(snapshot.current, snapshot.liveWitness)
     : null;
 
   const feedbackCard = paused ? snapshot.outcomes[snapshot.outcomes.length - 1]?.card : undefined;
-  const showAnswer = paused && snapshot.lastStatus !== 'match' && feedbackCard;
+  const missed = paused && snapshot.lastStatus !== 'match' && feedbackCard;
+  const card = missed ? feedbackCard : snapshot.current;
+
+  /**
+   * A card is shown with its reading the first couple of times it comes up,
+   * then on its own. Asking someone to recall what they have never been told
+   * is not a test of anything — and after a miss the answer is the point.
+   */
+  const showAnswer = Boolean(
+    card && (missed || showRomaji || teaching.has(card.id)),
+  );
 
   if (snapshot.status === 'starting') {
     return (
-      <section className="panel stage">
+      <section className="stage">
         <div className="loading">{snapshot.statusText || 'запускаю…'}</div>
         <button onClick={onStop}>Отмена</button>
       </section>
@@ -63,7 +68,7 @@ export function Drill({
   }
 
   return (
-    <section className={`panel stage ${paused ? (snapshot.lastStatus ?? '') : ''}`}>
+    <section className={`stage ${paused ? (snapshot.lastStatus ?? '') : ''}`}>
       <div className="stage-top">
         <span className="counter">осталось {snapshot.remaining + 1}</span>
         <span className={snapshot.listening ? 'mic on' : 'mic'}>
@@ -77,31 +82,22 @@ export function Drill({
         </div>
       </div>
 
-      {/* Only worth saying when the screen really will go dark mid-answer. */}
       {(wakeLock === 'unsupported' || wakeLock === 'refused') && (
         <div className="dim-warning">экран может погаснуть — браузер не даёт его удержать</div>
       )}
 
       {snapshot.error && <div className="banner error">Ошибка: {snapshot.error}</div>}
 
-      <div className="glyph">{(showAnswer ? feedbackCard.glyph : snapshot.current?.glyph) ?? '…'}</div>
-      {showAnswer ? (
-        <div className="answer">
-          <span className="answer-romaji">{feedbackCard.answer}</span>
-          {feedbackCard.note && <span className="answer-why">{feedbackCard.note}</span>}
-          <span className="answer-why">
-            {lastResult ? (QUALITY_TEXT[lastResult.quality] ?? '') : ''}
-          </span>
-          {lastResult?.correction && (
-            <span className="answer-why">{lastResult.correction.hint}</span>
-          )}
-        </div>
-      ) : (
-        <>
-          {showRomaji && <div className="romaji">{snapshot.current?.answer}</div>}
-          {/* Kanji carry their meanings; without them the glyph is a shape. */}
-          {snapshot.current?.note && <div className="card-note">{snapshot.current.note}</div>}
-        </>
+      <div className="glyph">{card?.glyph ?? '…'}</div>
+
+      {showAnswer && card && <CardHelp card={card} missed={Boolean(missed)} />}
+      {missed && (
+        <span className="answer-why">
+          {lastResult ? (QUALITY_TEXT[lastResult.quality] ?? '') : ''}
+        </span>
+      )}
+      {missed && lastResult?.correction && (
+        <span className="answer-why">{lastResult.correction.hint}</span>
       )}
 
       <div className="live">
@@ -128,5 +124,33 @@ export function Drill({
         </button>
       </div>
     </section>
+  );
+}
+
+/**
+ * How the card reads, and what it means.
+ *
+ * For a kanji the kana reading comes first and largest: it is the answer the
+ * drill is asking for, and the Latin and Cyrillic lines underneath are only
+ * there to say how that kana sounds to someone who cannot yet read it.
+ */
+function CardHelp({ card, missed }: { card: DrillCard; missed: boolean }) {
+  return (
+    <div className={missed ? 'help missed' : 'help'}>
+      {card.reading && <span className="help-reading">{card.reading}</span>}
+      <span className="help-latin">
+        {card.romaji}
+        <span className="help-sep"> · </span>
+        {card.kiriji}
+      </span>
+      {card.meaning && (
+        <span className="help-meaning">
+          {card.meaning.primary}
+          {card.meaning.extra.length > 0 && (
+            <span className="help-extra"> · {card.meaning.extra.join(', ')}</span>
+          )}
+        </span>
+      )}
+    </div>
   );
 }
