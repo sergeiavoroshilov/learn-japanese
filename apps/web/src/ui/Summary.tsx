@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { SessionPlan } from '../lib/plan';
-import { percentile } from '../lib/stats';
+import { accuracy, percentile } from '../lib/stats';
 import { interval, ms, percent } from './format';
 import type { CardResult } from './Trainer';
 
@@ -35,8 +35,7 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
     [correct],
   );
 
-  /** Cards that reached the scheduler, i.e. the session's real work. */
-  const graded = results.filter((r) => r.rating !== null);
+  const scored = accuracy(results.map((r) => r.quality));
   const introduced = new Set(results.filter((r) => r.introduced).map((r) => r.card.id));
 
   /**
@@ -59,8 +58,8 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
       <div className="stats">
         <Stat
           label="Верно"
-          value={`${correct.length}/${graded.length || results.length}`}
-          hint={graded.length > 0 ? percent(correct.length / graded.length) : undefined}
+          value={`${scored.correct} из ${scored.attempts}`}
+          hint={scored.share === null ? undefined : percent(scored.share)}
         />
         <Stat label="Скорость ответа, медиана" value={ms(medianOnset)} />
         <Stat label="Ошибок чтения" value={String(wrong.length)} />

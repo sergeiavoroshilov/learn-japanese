@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { DECKS } from './kana';
 import type { CardOutcome } from './session';
-import { percentile, summarize } from './stats';
+import { accuracy, percentile, summarize } from './stats';
 
 const card = DECKS[0]!.cards[0]!;
 
@@ -122,5 +122,34 @@ describe('summarize', () => {
     expect(stats.hitRate).toBe(0.25);
     expect(stats.eventualHitRate).toBe(0.75);
     expect(stats.lateMedian).toBe(1800);
+  });
+});
+
+describe('accuracy', () => {
+  test('a share can never exceed one, whatever the mix', () => {
+    // «18/2 — 900%»: the denominator had been «answers that moved the
+    // schedule», which after a session of practice is a handful.
+    const qualities = [
+      ...Array<string>(18).fill('correct'),
+      'wrong',
+      'mispronounced',
+      ...Array<string>(8).fill('unplaced'),
+    ];
+    const scored = accuracy(qualities);
+    expect(scored.correct).toBe(18);
+    expect(scored.attempts).toBe(20);
+    expect(scored.share).toBe(0.9);
+  });
+
+  test('a sound the recogniser could not place is not the learner’s miss', () => {
+    expect(accuracy(['correct', 'unplaced', 'unplaced']).attempts).toBe(1);
+  });
+
+  test('a skipped card was never an attempt', () => {
+    expect(accuracy(['correct', 'skipped']).share).toBe(1);
+  });
+
+  test('a session of nothing but engine failures has no share to report', () => {
+    expect(accuracy(['unplaced', 'skipped']).share).toBeNull();
   });
 });

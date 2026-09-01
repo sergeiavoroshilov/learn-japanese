@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { LevelProgress } from '../lib/curriculum';
 import { drillCardById } from '../lib/levels';
 import { LATENCY_GOOD_MS } from '../lib/srs';
-import { percentile } from '../lib/stats';
+import { accuracy, percentile } from '../lib/stats';
 import type { ProgressStore } from '../lib/store';
 import { ms, percent } from './format';
 
@@ -22,9 +22,8 @@ export function Stats({ store, state, onBack }: Props) {
   const seen = state.reduce((n, l) => n + l.learned + l.learning, 0);
   const total = state.reduce((n, l) => n + l.total, 0);
 
-  /** Answers that reached the scheduler, i.e. real recall attempts. */
-  const graded = reviews.filter((r) => r.rating !== null);
-  const correct = graded.filter((r) => r.quality === 'correct');
+  const scored = accuracy(reviews.map((r) => r.quality));
+  const correct = reviews.filter((r) => r.quality === 'correct');
   const medianOnset = percentile(
     correct.map((r) => r.onsetMs).filter((v): v is number => v !== null),
     50,
@@ -94,8 +93,8 @@ export function Stats({ store, state, onBack }: Props) {
           />
           <Stat
             label="Доля верных"
-            value={graded.length > 0 ? percent(correct.length / graded.length) : '—'}
-            hint={`${graded.length} ответов`}
+            value={scored.share === null ? '—' : percent(scored.share)}
+            hint={`${scored.attempts} ответов`}
           />
         </div>
       </div>
