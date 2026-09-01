@@ -1,6 +1,5 @@
 import { toHiragana } from 'wanakana';
-import type { KanaCard } from './kana';
-import { LEXICON_FORMS } from './lexicon';
+import type { DrillCard } from './card';
 
 export interface Expected {
   cardId: string;
@@ -14,24 +13,20 @@ export interface Expected {
   lexical: string[];
 }
 
-export function expectedFor(card: KanaCard, longForms = true): Expected {
-  // A mora the model has no word for at all (びゃ, ぴゃ, ぴょ) has an empty
-  // list. Fall back to the kana so nothing downstream sees an empty grammar
-  // or a card with no accepted reading.
-  const known = LEXICON_FORMS[card.kana];
-  const forms = known && known.length > 0 ? known : [card.kana];
-  // The bare mora is always first: it is what a decoder restricted to a single
-  // word is given when the long variants are switched off.
-  const lexical = longForms ? forms : forms.slice(0, 1);
+export function expectedFor(card: DrillCard, longForms = true): Expected {
+  // `readingsShort` is the bare answer; `readings` adds the held-vowel forms a
+  // mora takes when named on its own. The switch exists so the two can be
+  // compared on the same voice — see docs/SPIKE-ASR-VOSK.md, run 9.
+  const lexical = longForms ? card.readings : card.readingsShort;
   return {
     cardId: card.id,
-    accept: [...lexical, card.romaji, ...(card.alt ?? [])],
+    accept: [...lexical, ...card.typed],
     lexical,
   };
 }
 
 /** Flattened, de-duplicated grammar for a whole deck. */
-export function grammarFor(cards: KanaCard[], longForms = true): string[] {
+export function grammarFor(cards: DrillCard[], longForms = true): string[] {
   const out = new Set<string>();
   for (const card of cards) {
     for (const form of expectedFor(card, longForms).lexical) out.add(form);

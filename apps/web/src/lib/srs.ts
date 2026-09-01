@@ -7,7 +7,6 @@ import {
   type Card as FsrsCard,
   type Grade,
 } from 'ts-fsrs';
-import type { KanaCard } from './kana';
 
 /**
  * Short-term (intra-day) steps are off on purpose. A card missed inside a
@@ -184,4 +183,4 @@ export function isLearned(progress: CardProgress): boolean {
 }
 
 export { Rating, State };
-export type { FsrsCard, Grade, KanaCard };
+export type { FsrsCard, Grade };

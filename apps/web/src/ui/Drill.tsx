@@ -87,7 +87,8 @@ export function Drill({
       <div className="glyph">{(showAnswer ? feedbackCard.glyph : snapshot.current?.glyph) ?? '…'}</div>
       {showAnswer ? (
         <div className="answer">
-          <span className="answer-romaji">{feedbackCard.romaji}</span>
+          <span className="answer-romaji">{feedbackCard.answer}</span>
+          {feedbackCard.note && <span className="answer-why">{feedbackCard.note}</span>}
           <span className="answer-why">
             {lastResult ? (QUALITY_TEXT[lastResult.quality] ?? '') : ''}
           </span>
@@ -96,7 +97,11 @@ export function Drill({
           )}
         </div>
       ) : (
-        showRomaji && <div className="romaji">{snapshot.current?.romaji}</div>
+        <>
+          {showRomaji && <div className="romaji">{snapshot.current?.answer}</div>}
+          {/* Kanji carry their meanings; without them the glyph is a shape. */}
+          {snapshot.current?.note && <div className="card-note">{snapshot.current.note}</div>}
+        </>
       )}
 
       <div className="live">

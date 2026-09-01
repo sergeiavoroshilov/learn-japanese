@@ -36,10 +36,19 @@ describe('serialisation', () => {
     expect(restored.cards['hira-か']!.fsrs.last_review).toBeInstanceOf(Date);
   });
 
-  test('unknown settings fall back to defaults instead of undefined', () => {
+  test('missing settings fall back to defaults instead of undefined', () => {
     const restored = deserialize('{"version":1,"cards":{},"reviews":[],"settings":{"sessionSize":7}}');
     expect(restored.settings.sessionSize).toBe(7);
-    expect(restored.settings.decks).toEqual(['hira-basic']);
+    expect(restored.settings.newPerSession).toBe(DEFAULT_SETTINGS.newPerSession);
+    expect(restored.settings.timeoutMs).toBe(DEFAULT_SETTINGS.timeoutMs);
+  });
+
+  test('settings from an older version are dropped rather than carried', () => {
+    // «decks» was how a session used to be chosen, before the syllabus.
+    const restored = deserialize(
+      '{"version":1,"cards":{},"reviews":[],"settings":{"decks":["kata-youon"]}}',
+    );
+    expect((restored.settings as unknown as Record<string, unknown>).decks).toBeUndefined();
   });
 });
 
@@ -69,7 +78,7 @@ describe('ProgressStore', () => {
   test('a corrupt blob starts over rather than bricking the app', () => {
     const store = new ProgressStore(memory({ [STORAGE_KEY]: 'not json' }));
     expect(store.progress.cards).toEqual({});
-    expect(store.settings.decks).toEqual(['hira-basic']);
+    expect(store.settings).toEqual(DEFAULT_SETTINGS);
   });
 
   test('a browser with storage switched off still runs a session', () => {
@@ -87,9 +96,9 @@ describe('ProgressStore', () => {
     expect(store.progressFor('hira-か', NOW).graded).toBe(1);
   });
 
-  test('reset clears progress but keeps the chosen decks', () => {
+  test('reset clears progress but keeps the settings', () => {
     const store = new ProgressStore(memory());
-    store.saveSettings({ ...DEFAULT_SETTINGS, decks: ['kata-basic'], sessionSize: 30 });
+    store.saveSettings({ ...DEFAULT_SETTINGS, sessionSize: 30 });
     const applied = applyAnswer(store.progressFor('kata-か', NOW), { quality: 'correct', onsetMs: 700 }, NOW);
     store.record(applied.progress, {
       id: 'kata-か',
@@ -101,7 +110,6 @@ describe('ProgressStore', () => {
 
     store.reset();
     expect(store.progress.cards).toEqual({});
-    expect(store.settings.decks).toEqual(['kata-basic']);
     expect(store.settings.sessionSize).toBe(30);
   });
 });

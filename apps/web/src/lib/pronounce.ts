@@ -1,3 +1,4 @@
+import type { DrillCard } from './card';
 import { ALL_CARDS, type KanaCard } from './kana';
 import { LEXICON_FORMS } from './lexicon';
 import { normalize } from './match';
@@ -38,16 +39,19 @@ export interface Correction {
   systematic: boolean;
 }
 
-export function correctionFor(expected: KanaCard, heardRaw: string[]): Correction | null {
+export function correctionFor(expected: DrillCard, heardRaw: string[]): Correction | null {
+  // Every rule below is about where a mora sits in the gojūon table, and a
+  // kanji sits nowhere in it. Nothing to say about those yet.
+  if (expected.row === undefined || expected.col === undefined) return null;
   for (const raw of heardRaw) {
     const heard = moraOf(raw);
-    if (!heard || heard.kana === expected.kana) continue;
+    if (!heard || heard.readingsShort.includes(expected.readingsShort[0] ?? '')) continue;
     return { heard: heard.glyph, ...hintFor(expected, heard) };
   }
   return null;
 }
 
-function hintFor(expected: KanaCard, heard: KanaCard): Omit<Correction, 'heard'> {
+function hintFor(expected: DrillCard, heard: KanaCard): Omit<Correction, 'heard'> {
   // /u/ heard as /o/ — う→を, く→こ, す→そ, ふ→ほ, む→も, る→ろ, ゆ→よ. Seven
   // different moras, one error, in every run so far.
   //
@@ -81,10 +85,10 @@ function hintFor(expected: KanaCard, heard: KanaCard): Omit<Correction, 'heard'>
 
   // No phonetic story — the wrong mora was read, not the right one said badly.
   if (expected.row === heard.row) {
-    return { hint: `тот же ряд, другой гласный — ${heard.romaji} вместо ${expected.romaji}.`, systematic: false };
+    return { hint: `тот же ряд, другой гласный — ${heard.romaji} вместо ${expected.answer}.`, systematic: false };
   }
   if (expected.col === heard.col) {
-    return { hint: `тот же гласный, другой согласный — ${heard.romaji} вместо ${expected.romaji}.`, systematic: false };
+    return { hint: `тот же гласный, другой согласный — ${heard.romaji} вместо ${expected.answer}.`, systematic: false };
   }
-  return { hint: `это ${heard.romaji}, а не ${expected.romaji}.`, systematic: false };
+  return { hint: `это ${heard.romaji}, а не ${expected.answer}.`, systematic: false };
 }

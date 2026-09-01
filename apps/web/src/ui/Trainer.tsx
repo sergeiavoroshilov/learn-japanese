@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { NAMEABLE_CARDS, cardsOf, type KanaCard } from '../lib/kana';
+import type { DrillCard } from '../lib/card';
+import { NAMEABLE_CARDS } from '../lib/kana';
+import { curriculum, type LevelProgress } from '../lib/curriculum';
 import { classify, factsFrom } from '../lib/grade';
 import { grammarFor } from '../lib/match';
 import { correctionFor, type Correction } from '../lib/pronounce';
@@ -10,10 +12,11 @@ import { ProgressStore, type Settings } from '../lib/store';
 import { ScreenWakeLock, type WakeLockState } from '../lib/wakelock';
 import { Drill } from './Drill';
 import { Home } from './Home';
+import { Stats } from './Stats';
 import { Summary } from './Summary';
 
 export interface CardResult {
-  card: KanaCard;
+  card: DrillCard;
   quality: AnswerQuality;
   onsetMs: number | null;
   /** FSRS grade, or null when the answer never reached the scheduler. */
@@ -55,7 +58,7 @@ export function Trainer() {
   const engine: Engine = mock ? 'mock' : 'vosk';
 
   const [settings, setSettings] = useState<Settings>(store.settings);
-  const [screen, setScreen] = useState<'home' | 'drill' | 'summary'>('home');
+  const [screen, setScreen] = useState<'home' | 'drill' | 'summary' | 'stats'>('home');
   const [snapshot, setSnapshot] = useState<SessionSnapshot>(IDLE);
   const [results, setResults] = useState<CardResult[]>([]);
   const [plan, setPlan] = useState<SessionPlan | null>(null);
@@ -86,10 +89,15 @@ export function Trainer() {
     [store],
   );
 
+  const state: LevelProgress[] = useMemo(
+    () => curriculum(progressFor, new Date()),
+    [progressFor],
+  );
+
   const start = useCallback((mode: 'due' | 'free' = 'due') => {
     const now = new Date();
-    const pool = cardsOf(settings.decks);
-    const built = planSession(pool, (id) => store.progressFor(id, now), now, {
+    const look = (id: string) => store.progressFor(id, now);
+    const built = planSession(curriculum(look, now), look, now, {
       size: settings.sessionSize,
       newLimit: settings.newPerSession,
       excludeOov: engine === 'vosk',
@@ -115,7 +123,7 @@ export function Trainer() {
       // The deck-wide decoder runs alongside and never decides anything on its
       // own; its job is to name the mora the learner actually said, which is
       // what separates a misreading from a sound the decoder could not place.
-      deckVocabulary: grammarFor(pool.filter((c) => !c.voiceOov)),
+      deckVocabulary: grammarFor(built.cards.filter((c) => !c.voiceOov)),
       witnessVocabulary: grammarFor(NAMEABLE_CARDS),
       witness: true,
       acceptFromWitness: true,
@@ -232,11 +240,12 @@ export function Trainer() {
         <Home
           settings={settings}
           onSettings={updateSettings}
-          progressFor={progressFor}
+          state={state}
           store={store}
           mock={mock}
           failure={failure}
           onStart={start}
+          onStats={() => setScreen('stats')}
           onImported={() => {
             setSettings(store.settings);
             setRevision((r) => r + 1);
@@ -254,6 +263,10 @@ export function Trainer() {
           onSkip={() => sessionRef.current?.skip()}
           onStop={stop}
         />
+      )}
+
+      {screen === 'stats' && (
+        <Stats store={store} state={state} onBack={() => setScreen('home')} />
       )}
 
       {screen === 'summary' && (

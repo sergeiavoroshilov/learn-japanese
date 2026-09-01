@@ -1,4 +1,6 @@
 import { toKatakana } from 'wanakana';
+import type { DrillCard } from './card';
+import { LEXICON_FORMS } from './lexicon';
 
 export type KanaScript = 'hiragana' | 'katakana';
 export type KanaGroup = 'basic' | 'dakuten' | 'youon';
@@ -12,10 +14,7 @@ export type DeckId = `${'hira' | 'kata'}-${KanaGroup}`;
  */
 export const VOICE_OOV_KANA = ['びゃ', 'ぴゃ', 'ぴょ'];
 
-export interface KanaCard {
-  id: string;
-  /** What is shown on screen — hiragana or katakana. */
-  glyph: string;
+export interface KanaCard extends DrillCard {
   /** Canonical reading in hiragana. This is what the decoder is asked for. */
   kana: string;
   /** Hepburn romaji, shown to the user as the answer key. */
@@ -28,8 +27,6 @@ export interface KanaCard {
   col: string;
   /** Extra romaji spellings an engine might return (kunrei-shiki etc). */
   alt?: string[];
-  /** The reading is outside the recogniser's lexicon. */
-  voiceOov?: boolean;
 }
 
 /** kana, romaji, then any alternative romaji spellings. */
@@ -119,6 +116,8 @@ function buildGrid(script: KanaScript, group: KanaGroup): DeckGrid {
       const cells = spec.cells.map((entry, i) => {
         if (!entry) return null;
         const [kana, romaji, ...alt] = entry;
+        const known = LEXICON_FORMS[kana];
+        const forms = known && known.length > 0 ? known : [kana];
         const card: KanaCard = {
           // Keyed by script and glyph, not by romaji: じ/ぢ and ず/づ share a
           // reading but are different cards, and this id is the SRS key.
@@ -131,6 +130,11 @@ function buildGrid(script: KanaScript, group: KanaGroup): DeckGrid {
           row: spec.key,
           col: table.columns[i]!,
           alt: alt.length ? alt : undefined,
+          readings: forms,
+          readingsShort: [kana],
+          typed: [romaji, ...alt],
+          answer: romaji,
+          levelId: `${prefix}-${group}`,
           voiceOov: VOICE_OOV_KANA.includes(kana) || undefined,
         };
         return card;

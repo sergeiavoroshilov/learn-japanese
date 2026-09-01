@@ -1,16 +1,18 @@
-import { shuffle, type KanaCard } from './kana';
-import { isDue, isNew, isLearned, type CardProgress } from './srs';
-
-export type ProgressLookup = (id: string) => CardProgress;
+import type { DrillCard } from './card';
+import { currentLevel, reachedCards, type LevelProgress, type ProgressLookup } from './curriculum';
+import { shuffle } from './kana';
+import { isDue, isNew } from './srs';
 
 export interface SessionPlan {
-  cards: KanaCard[];
+  cards: DrillCard[];
   /** How many of them are repeats the schedule asked for. */
   due: number;
   /** How many are glyphs the learner has never seen. */
   fresh: number;
+  /** Which level the new glyphs came from. */
+  fromLevel: string | null;
   /** Cards left out because the recogniser has no word for them. */
-  excluded: KanaCard[];
+  excluded: DrillCard[];
 }
 
 export interface PlanOptions {
@@ -28,76 +30,43 @@ export interface PlanOptions {
 }
 
 /**
- * Build one session: everything the schedule says is due, oldest first, then
- * new glyphs to fill the remaining room.
+ * Build one session out of the syllabus.
  *
- * Due cards come first in the selection but not in the running order — the
- * final deck is shuffled, so a session does not open with the whole backlog
- * and end with the easy new ones.
+ * Reviews are drawn from every level the learner has reached; new glyphs only
+ * from the level they are on. That is the whole of the pacing rule: nothing
+ * blocks a review, and nothing hands you 花 before you can read か.
  */
 export function planSession(
-  pool: KanaCard[],
+  state: LevelProgress[],
   progressFor: ProgressLookup,
   now: Date,
   opts: PlanOptions,
 ): SessionPlan {
-  const excluded = opts.excludeOov ? pool.filter((c) => c.voiceOov) : [];
-  const usable = opts.excludeOov ? pool.filter((c) => !c.voiceOov) : pool;
+  const reached = reachedCards(state);
+  const excluded = opts.excludeOov ? reached.filter((c) => c.voiceOov) : [];
+  const usable = opts.excludeOov ? reached.filter((c) => !c.voiceOov) : reached;
 
-  const seen = usable.filter((c) => !isNew(progressFor(c.id)));
-  const fresh = usable.filter((c) => isNew(progressFor(c.id)));
-
-  const due = seen
+  const due = usable
+    .filter((c) => !isNew(progressFor(c.id)))
     .filter((c) => opts.mode === 'free' || isDue(progressFor(c.id), now))
     .sort(
       (a, b) => progressFor(a.id).fsrs.due.getTime() - progressFor(b.id).fsrs.due.getTime(),
     )
     .slice(0, opts.size);
 
-  // New glyphs are introduced in table order — あいうえお teaches better than
-  // a random scatter — and only up to the daily ceiling.
-  const introduced = fresh.slice(0, Math.max(0, Math.min(opts.newLimit, opts.size - due.length)));
+  const level = currentLevel(state);
+  // New glyphs come in the level's own order — kana by the gojūon table,
+  // kanji by how often they appear in print — never at random.
+  const fresh = (level?.level.cards ?? [])
+    .filter((c) => !opts.excludeOov || !c.voiceOov)
+    .filter((c) => isNew(progressFor(c.id)))
+    .slice(0, Math.max(0, Math.min(opts.newLimit, opts.size - due.length)));
 
   return {
-    cards: shuffle([...due, ...introduced]),
+    cards: shuffle([...due, ...fresh]),
     due: due.length,
-    fresh: introduced.length,
+    fresh: fresh.length,
+    fromLevel: fresh.length > 0 ? (level?.level.id ?? null) : null,
     excluded,
   };
-}
-
-export interface PoolStats {
-  total: number;
-  /** Never shown. */
-  fresh: number;
-  /** Seen, but not yet stable enough to count as learned. */
-  learning: number;
-  /** FSRS is willing to wait a week or more. */
-  learned: number;
-  /** Due right now. */
-  due: number;
-  /** When the next card falls due, if none is due yet. */
-  nextDue: Date | null;
-}
-
-export function poolStats(pool: KanaCard[], progressFor: ProgressLookup, now: Date): PoolStats {
-  let fresh = 0;
-  let learning = 0;
-  let learned = 0;
-  let due = 0;
-  let nextDue: Date | null = null;
-
-  for (const card of pool) {
-    const progress = progressFor(card.id);
-    if (isNew(progress)) {
-      fresh++;
-      continue;
-    }
-    if (isLearned(progress)) learned++;
-    else learning++;
-    if (isDue(progress, now)) due++;
-    else if (nextDue === null || progress.fsrs.due < nextDue) nextDue = progress.fsrs.due;
-  }
-
-  return { total: pool.length, fresh, learning, learned, due, nextDue };
 }

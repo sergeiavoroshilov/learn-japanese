@@ -1,8 +1,6 @@
-import type { DeckId } from './kana';
 import { newProgress, type AnswerQuality, type CardProgress } from './srs';
 
 export interface Settings {
-  decks: DeckId[];
   /** Cards per session. A drill is meant to last a couple of minutes. */
   sessionSize: number;
   /** Ceiling on unseen glyphs introduced in one session. */
@@ -14,7 +12,6 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  decks: ['hira-basic'],
   sessionSize: 20,
   newPerSession: 5,
   timeoutMs: 6000,
@@ -73,8 +70,22 @@ export function deserialize(raw: string): Progress {
     version: VERSION,
     cards,
     reviews: (parsed.reviews ?? []).slice(-MAX_REVIEWS),
-    settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
+    // Only the keys the app still has. A stored setting that no longer
+    // exists — «decks», from before the syllabus decided what to show — must
+    // not ride along forever in everyone's saved progress.
+    settings: pickSettings(parsed.settings),
   };
+}
+
+function pickSettings(stored: Partial<Settings> | undefined): Settings {
+  const out = { ...DEFAULT_SETTINGS };
+  for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]) {
+    const value = stored?.[key];
+    if (typeof value === typeof DEFAULT_SETTINGS[key]) {
+      (out as Record<string, unknown>)[key] = value;
+    }
+  }
+  return out;
 }
 
 export function serialize(progress: Progress): string {

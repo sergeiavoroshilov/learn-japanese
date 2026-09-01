@@ -1,78 +1,48 @@
-import { useMemo, useRef } from 'react';
-import { DECKS, VOICE_OOV_KANA, cardsOf, type DeckId } from '../lib/kana';
-import { poolStats, type ProgressLookup } from '../lib/plan';
-import { LATENCY_GOOD_MS } from '../lib/srs';
+import { useRef, useState } from 'react';
+import { currentLevel, type LevelProgress } from '../lib/curriculum';
 import { serialize, type ProgressStore, type Settings } from '../lib/store';
-import { cards as cardsWord, ms, when } from './format';
+import { percent } from './format';
 
 interface Props {
   settings: Settings;
   onSettings(next: Settings): void;
-  progressFor: ProgressLookup;
+  state: LevelProgress[];
   store: ProgressStore;
   mock: boolean;
   /** Why the previous attempt to start a session failed. */
   failure: string | null;
   onStart(mode?: 'due' | 'free'): void;
+  onStats(): void;
   onImported(): void;
 }
 
 export function Home({
   settings,
   onSettings,
-  progressFor,
+  state,
   store,
   mock,
   failure,
   onStart,
+  onStats,
   onImported,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const now = useMemo(() => new Date(), [settings, progressFor]);
-  const pool = useMemo(() => cardsOf(settings.decks), [settings.decks]);
-  const stats = useMemo(() => poolStats(pool, progressFor, now), [pool, progressFor, now]);
-
-  /**
-   * Slow but correct is the interesting state: the glyph is known and not yet
-   * automatic, which is exactly what this drill exists to fix.
-   */
-  const slowest = useMemo(
-    () =>
-      pool
-        .map((card) => ({ card, avg: progressFor(card.id).avgOnsetMs }))
-        .filter((row): row is { card: (typeof pool)[number]; avg: number } => row.avg !== null)
-        .sort((a, b) => b.avg - a.avg)
-        .slice(0, 8),
-    [pool, progressFor],
+  const [showSettings, setShowSettings] = useState(false);
+  const current = currentLevel(state);
+  const due = state.filter((l) => l.unlocked).reduce((n, l) => n + l.due, 0);
+  const plannedDue = Math.min(due, settings.sessionSize);
+  const plannedNew = Math.min(
+    settings.newPerSession,
+    Math.max(0, settings.sessionSize - plannedDue),
+    current?.fresh ?? 0,
   );
-
-  const excluded = useMemo(
-    () => (mock ? [] : pool.filter((c) => c.voiceOov)),
-    [pool, mock],
-  );
-
-  const plannedNew = Math.max(
-    0,
-    Math.min(settings.newPerSession, settings.sessionSize - Math.min(stats.due, settings.sessionSize)),
-  );
-  const plannedNewReal = Math.min(plannedNew, stats.fresh);
-  const plannedDue = Math.min(stats.due, settings.sessionSize);
-  const nothingToDo = plannedDue === 0 && plannedNewReal === 0;
-
+  const nothingToDo = plannedDue === 0 && plannedNew === 0;
   const secure = window.isSecureContext || mock;
-
-  const toggleDeck = (id: DeckId) =>
-    onSettings({
-      ...settings,
-      decks: settings.decks.includes(id)
-        ? settings.decks.filter((d) => d !== id)
-        : [...settings.decks, id],
-    });
 
   const backup = async () => {
     await navigator.clipboard.writeText(serialize(store.progress));
   };
-
   const restore = async (file: File | undefined) => {
     if (!file) return;
     store.import(await file.text());
@@ -85,207 +55,196 @@ export function Home({
         <h1>Кана на скорость</h1>
         <p className="sub">
           Символ на экране — произнесите его вслух. Считается время до начала
-          ответа: символ, который вспоминается две секунды, ещё не выучен, даже
-          если назван верно. Повторения планирует FSRS.
+          ответа: то, что вспоминается две секунды, ещё не выучено.
         </p>
       </header>
 
       {mock && (
-        <div className="banner mock">
-          Мок-режим: отвечайте с клавиатуры ромадзи, микрофон не нужен.
-        </div>
+        <div className="banner mock">Мок-режим: ответы с клавиатуры, микрофон не нужен.</div>
       )}
       {failure && (
         <div className="banner error">
           Сессия не запустилась: {failure}
           {/Permission|denied|NotAllowed/i.test(failure) && (
             <>
-              {' '}— браузер не дал доступ к микрофону. Разрешите его в настройках
-              сайта и попробуйте снова, либо тренируйтесь с клавиатуры:{' '}
-              <a href="?mock=1">мок-режим</a>.
+              {' '}— разрешите микрофон в настройках сайта, либо тренируйтесь
+              с клавиатуры: <a href="?mock=1">мок-режим</a>.
             </>
           )}
         </div>
       )}
       {!secure && (
         <div className="banner error">
-          Страница открыта не в защищённом контексте — микрофон будет
-          заблокирован. Откройте по <code>localhost</code> или запустите{' '}
-          <code>bun run dev:https</code>.
+          Микрофон работает только в защищённом контексте: откройте по{' '}
+          <code>localhost</code> или запустите <code>bun run dev:https</code>.
         </div>
       )}
 
-      <section className="panel">
-        <h2>Наборы</h2>
-        <div className="chips">
-          {DECKS.map((deck) => (
-            <label key={deck.id} className={settings.decks.includes(deck.id) ? 'chip on' : 'chip'}>
-              <input
-                type="checkbox"
-                checked={settings.decks.includes(deck.id)}
-                onChange={() => toggleDeck(deck.id)}
-              />
-              {deck.label}
-            </label>
-          ))}
-        </div>
-        {excluded.length > 0 && (
-          <p className="note-inline">
-            Голосом не тренируются: {excluded.map((c) => c.glyph).join(' ')} — этих
-            мор ({VOICE_OOV_KANA.join(', ')}) нет в словаре распознавателя, и
-            засчитать их нечем.
-          </p>
-        )}
-      </section>
-
-      <section className="panel">
-        <h2>Прогресс</h2>
-        <div className="stats">
-          <Stat label="Символов в наборах" value={String(stats.total)} />
-          <Stat
-            label="Выучено"
-            value={String(stats.learned)}
-            hint="повтор реже раза в неделю"
-          />
-          <Stat label="В работе" value={String(stats.learning)} />
-          <Stat label="Не начато" value={String(stats.fresh)} />
-          <Stat
-            label="К повторению"
-            value={String(stats.due)}
-            hint={stats.due === 0 ? `следующее ${when(stats.nextDue, now)}` : undefined}
-          />
-        </div>
-
+      <div className="block">
         {nothingToDo ? (
           <>
-            <button className="primary" onClick={() => onStart('free')} disabled={stats.total === 0}>
-              Потренироваться сверх плана
+            <button className="primary" onClick={() => onStart('free')} disabled={!current}>
+              Потренироваться
             </button>
             <p className="note-inline">
-              По графику сегодня ничего не нужно — следующее повторение{' '}
-              {when(stats.nextDue, now)}. Лишняя тренировка не вредит: FSRS
+              По графику сегодня ничего не нужно. Лишний повтор не вредит — FSRS
               учтёт, что символ спросили раньше срока.
             </p>
           </>
         ) : (
           <>
             <button className="primary" onClick={() => onStart('due')}>
-              Начать сессию
+              Начать
             </button>
-            <p className="note-inline">В сессии: {sessionShape(plannedDue, plannedNewReal)}.</p>
+            <p className="note-inline">
+              {[
+                plannedDue > 0 ? `${plannedDue} на повторение` : null,
+                plannedNew > 0 ? `${plannedNew} новых` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              {current && plannedNew > 0 ? ` из «${current.level.label}»` : ''}
+            </p>
           </>
         )}
-      </section>
+      </div>
 
-      {slowest.length > 0 && (
-        <section className="panel">
-          <h2>Самые медленные</h2>
-          <div className="slow-list">
-            {slowest.map(({ card, avg }) => (
-              <div key={card.id} className={avg > LATENCY_GOOD_MS ? 'slow slow-bad' : 'slow'}>
-                <span className="slow-glyph">{card.glyph}</span>
-                <span className="slow-romaji">{card.romaji}</span>
-                <span className="slow-ms">{ms(avg)}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="panel settings">
-        <h2>Настройки</h2>
-        <div className="row">
-          <label className="field">
-            <span className="label">Карточек в сессии</span>
-            <input
-              type="number"
-              min={5}
-              max={100}
-              value={settings.sessionSize}
-              onChange={(e) => onSettings({ ...settings, sessionSize: Number(e.target.value) })}
-            />
-          </label>
-          <label className="field">
-            <span className="label">Новых за сессию</span>
-            <input
-              type="number"
-              min={0}
-              max={20}
-              value={settings.newPerSession}
-              onChange={(e) => onSettings({ ...settings, newPerSession: Number(e.target.value) })}
-            />
-          </label>
-          <label className="field">
-            <span className="label">Ждать ответа, мс</span>
-            <input
-              type="number"
-              min={2000}
-              max={15000}
-              step={500}
-              value={settings.timeoutMs}
-              onChange={(e) => onSettings({ ...settings, timeoutMs: Number(e.target.value) })}
-            />
-          </label>
-          <label className="field checkbox">
-            <input
-              type="checkbox"
-              checked={settings.showRomaji}
-              onChange={(e) => onSettings({ ...settings, showRomaji: e.target.checked })}
-            />
-            <span>Показывать ромадзи</span>
-          </label>
-        </div>
-
-        <div className="row">
-          <button onClick={backup}>Копия прогресса в буфер</button>
-          <button onClick={() => fileRef.current?.click()}>Восстановить из файла</button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json"
-            hidden
-            onChange={(e) => void restore(e.target.files?.[0])}
-          />
-          <button
-            onClick={() => {
-              if (window.confirm('Удалить весь прогресс? Это необратимо.')) {
-                store.reset();
-                onImported();
-              }
-            }}
-          >
-            Сбросить прогресс
-          </button>
+      <div className="block">
+        <h2>Программа</h2>
+        <div className="levels">
+          {state.map((l) => (
+            <LevelRow key={l.level.id} level={l} current={l.level.id === current?.level.id} />
+          ))}
         </div>
         <p className="note-inline">
-          Прогресс хранится только в этом браузере: очистка данных сайта стирает
-          его безвозвратно.
+          Новые символы берутся только из текущего уровня — следующий
+          открывается, когда этот выучен на {percent(0.9)}. Повторения при этом
+          идут со всех пройденных.
         </p>
-      </section>
+      </div>
+
+      <div className="block">
+        <div className="actions">
+          <button className="link" onClick={onStats}>
+            Статистика
+          </button>
+          <button className="link" onClick={() => setShowSettings((v) => !v)}>
+            {showSettings ? 'Скрыть настройки' : 'Настройки'}
+          </button>
+        </div>
+
+        {showSettings && (
+          <div className="settings">
+            <div className="row">
+              <label className="field">
+                <span className="label">Карточек в сессии</span>
+                <input
+                  type="number"
+                  min={5}
+                  max={100}
+                  value={settings.sessionSize}
+                  onChange={(e) => onSettings({ ...settings, sessionSize: Number(e.target.value) })}
+                />
+              </label>
+              <label className="field">
+                <span className="label">Новых за сессию</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={settings.newPerSession}
+                  onChange={(e) =>
+                    onSettings({ ...settings, newPerSession: Number(e.target.value) })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span className="label">Ждать ответа, мс</span>
+                <input
+                  type="number"
+                  min={2000}
+                  max={15000}
+                  step={500}
+                  value={settings.timeoutMs}
+                  onChange={(e) => onSettings({ ...settings, timeoutMs: Number(e.target.value) })}
+                />
+              </label>
+              <label className="field checkbox">
+                <input
+                  type="checkbox"
+                  checked={settings.showRomaji}
+                  onChange={(e) => onSettings({ ...settings, showRomaji: e.target.checked })}
+                />
+                <span>Показывать чтение</span>
+              </label>
+            </div>
+
+            <div className="actions">
+              <button onClick={backup}>Копия прогресса в буфер</button>
+              <button onClick={() => fileRef.current?.click()}>Восстановить из файла</button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json"
+                hidden
+                onChange={(e) => void restore(e.target.files?.[0])}
+              />
+              <button
+                onClick={() => {
+                  if (window.confirm('Удалить весь прогресс? Это необратимо.')) {
+                    store.reset();
+                    onImported();
+                  }
+                }}
+              >
+                Сбросить прогресс
+              </button>
+            </div>
+            <p className="note-inline">
+              Прогресс хранится только в этом браузере: очистка данных сайта
+              стирает его безвозвратно.
+            </p>
+          </div>
+        )}
+      </div>
 
       <footer className="foot">
         <a href="?lab=1">Лаборатория распознавания</a> — стенд из спайка №2:
-        ручки декодера, сырые гипотезы и JSON-отчёт для замеров на новом
-        устройстве.
+        таблица годзюон, ручки декодера и JSON-отчёт для замеров.
       </footer>
     </>
   );
-}
 
-/** «5 карточек на повторение и 3 новых» without the zero-valued halves. */
-function sessionShape(due: number, fresh: number): string {
-  const parts: string[] = [];
-  if (due > 0) parts.push(`${cardsWord(due)} на повторение`);
-  if (fresh > 0) parts.push(`${fresh} новых`);
-  return parts.join(' и ');
-}
-
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="stat">
-      <span className="stat-label">{label}</span>
-      <span className="stat-value">{value}</span>
-      {hint && <span className="stat-hint">{hint}</span>}
-    </div>
-  );
+  function LevelRow({ level, current }: { level: LevelProgress; current: boolean }) {
+    const cls = [
+      'level',
+      current ? 'current' : '',
+      level.complete ? 'done' : '',
+      level.unlocked ? '' : 'locked',
+    ]
+      .filter(Boolean)
+      .join(' ');
+    return (
+      <div className={cls}>
+        <span className="level-name">
+          {level.level.label}
+          {level.complete ? ' ✓' : ''}
+        </span>
+        <span className="level-count">
+          {level.unlocked ? `${level.learned} / ${level.total}` : 'закрыт'}
+        </span>
+        {level.unlocked && (
+          <div className="bar">
+            <div className="bar-fill" style={{ width: percent(level.share) }} />
+          </div>
+        )}
+        {current && (
+          <span className="level-note">
+            {level.level.note}
+            {level.due > 0 ? ` · ${level.due} к повторению` : ''}
+          </span>
+        )}
+      </div>
+    );
+  }
 }

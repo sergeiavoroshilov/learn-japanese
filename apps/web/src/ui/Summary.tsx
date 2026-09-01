@@ -84,7 +84,7 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
           <ul className="corrections">
             {corrections.map((r, i) => (
               <li key={i}>
-                {r.card.glyph} ({r.card.romaji}) — услышано «{r.correction!.heard}»:{' '}
+                {r.card.glyph} ({r.card.answer}) — услышано «{r.correction!.heard}»:{' '}
                 {r.correction!.hint}
               </li>
             ))}
@@ -114,9 +114,9 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
         </thead>
         <tbody>
           {results.map((r, i) => (
-            <tr key={`${r.card.id}-${i}`} className={r.quality === 'correct' ? '' : 'timeout'}>
+            <tr key={`${r.card.id}-${i}`} className={r.quality === 'correct' ? '' : 'miss'}>
               <td className="cell-glyph">{r.card.glyph}</td>
-              <td>{r.card.romaji}</td>
+              <td>{r.card.answer}</td>
               <td>
                 {QUALITY_LABEL[r.quality] ?? r.quality}
                 {r.introduced ? ' · новая' : ''}

@@ -483,7 +483,7 @@ export function Lab() {
           </div>
 
           <div className="glyph">{snapshot.current?.glyph ?? '…'}</div>
-          {showRomaji && <div className="romaji">{snapshot.current?.romaji}</div>}
+          {showRomaji && <div className="romaji">{snapshot.current?.answer}</div>}
 
           <div className="live">
             {notPlaced && (
@@ -592,7 +592,7 @@ export function Lab() {
                 <tr key={o.index} className={o.status}>
                   <td>{o.index + 1}</td>
                   <td className="cell-glyph">{o.card.glyph}</td>
-                  <td>{o.card.romaji}</td>
+                  <td>{o.card.answer}</td>
                   <td>
                     {statusLabel(o.status)}
                     {o.exact === false ? ' (подстрока)' : ''}

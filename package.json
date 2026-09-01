@@ -12,9 +12,11 @@
     "typecheck": "bun --filter web typecheck",
     "test": "bun test",
     "fetch:model": "./scripts/fetch-vosk-model.sh",
-    "lexicon": "./scripts/lexicon-forms.sh"
+    "lexicon": "./scripts/lexicon-forms.sh",
+    "kanji": "./scripts/kanji-data.sh"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.0"
+    "@types/bun": "^1.4.0",
+    "kanji-data": "^1.1.0"
   }
 }

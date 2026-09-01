@@ -155,7 +155,7 @@ export function buildReport(
     stats: summarize(outcomes),
     cards: outcomes.map((o) => ({
       glyph: o.card.glyph,
-      romaji: o.card.romaji,
+      romaji: o.card.answer,
       status: o.status,
       onsetMs: o.onsetMs,
       speechMs: o.speechMs,

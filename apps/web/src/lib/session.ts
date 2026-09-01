@@ -1,5 +1,5 @@
 import { MicSource } from './audio';
-import type { KanaCard } from './kana';
+import type { DrillCard } from './card';
 import { KeyboardSource } from './keyboard';
 import { expectedFor } from './match';
 import { OnsetDetector, type OnsetSource } from './onset';
@@ -16,7 +16,7 @@ export type CardStatus = 'match' | 'late' | 'timeout' | 'skipped';
 
 export interface CardOutcome {
   index: number;
-  card: KanaCard;
+  card: DrillCard;
   /** ms from card shown to the user starting to speak (mic energy). */
   onsetMs: number | null;
   /**
@@ -56,7 +56,7 @@ export interface SessionSnapshot {
   totalCards: number;
   /** Cards still queued behind this one, including repeats. */
   remaining: number;
-  current: KanaCard | null;
+  current: DrillCard | null;
   /** Set briefly after a match so the UI can flash green. */
   lastStatus: CardStatus | null;
   liveHypotheses: Hypothesis[];
@@ -74,7 +74,7 @@ export interface SessionSnapshot {
 }
 
 export interface SessionOptions {
-  cards: KanaCard[];
+  cards: DrillCard[];
   timeoutMs: number;
   rule: MatchRule;
   /** Pause between a match and the next card. Keep it short — this is a flow drill. */
@@ -122,7 +122,7 @@ export class DrillSession {
 
   private mic: MicSource | null = null;
   /** Mutable: a missed card is pushed back into it, so it can outgrow the plan. */
-  private queue: KanaCard[];
+  private queue: DrillCard[];
   private status: SessionSnapshot['status'] = 'idle';
   private statusText = '';
   private cardIndex = -1;
@@ -264,7 +264,7 @@ export class DrillSession {
    * worth another try within the minute; FSRS only decides which *day* a card
    * comes back, so without this a miss would simply be lost until tomorrow.
    */
-  requeue(card: KanaCard, gap = 3): void {
+  requeue(card: DrillCard, gap = 3): void {
     const at = Math.min(this.queue.length, this.cardIndex + 1 + gap);
     this.queue = [...this.queue.slice(0, at), card, ...this.queue.slice(at)];
     this.emit();
