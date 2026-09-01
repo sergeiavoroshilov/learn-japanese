@@ -73,10 +73,12 @@ export function Drill({
     <section className={`stage ${paused ? (snapshot.lastStatus ?? '') : ''}`}>
       <div className="stage-top">
         <span className="counter">осталось {snapshot.remaining + 1}</span>
-        <span className={snapshot.listening && !snapshot.awaitingContinue ? 'mic on' : 'mic'}>
-          {/* The engine is still on while the drill holds, but the card is
-              disarmed and nothing said now counts — «слушаю» would be a lie. */}
-          {snapshot.listening && !snapshot.awaitingContinue ? 'слушаю' : 'пауза'}
+        <span className={snapshot.listening ? 'mic on' : 'mic'}>
+          {!snapshot.listening
+            ? 'пауза'
+            : snapshot.awaitingContinue
+              ? 'повторите вслух'
+              : 'слушаю'}
         </span>
         <div className="meter">
           <div
@@ -102,6 +104,11 @@ export function Drill({
       )}
       {missed && lastResult?.correction && (
         <span className="answer-why">{lastResult.correction.hint}</span>
+      )}
+      {snapshot.awaitingContinue && (
+        <span className="answer-why">
+          скажите вслух — продолжится само
+        </span>
       )}
 
       <div className="live">

@@ -63,6 +63,10 @@ export interface SessionSnapshot {
    * The card is finished and wrong, and the drill is holding still until the
    * learner says to go on. The correction is the most useful thing on the
    * screen and it must not be read against a clock.
+   *
+   * The recogniser keeps listening for that same reading while it holds:
+   * saying it correctly is what «go on» means, and it beats reaching for a
+   * key with the answer in front of you.
    */
   awaitingContinue: boolean;
   liveHypotheses: Hypothesis[];
@@ -146,6 +150,12 @@ export class DrillSession {
   private lastStatus: CardStatus | null = null;
   private listening = false;
   private awaitingContinue = false;
+  /**
+   * Listening for the learner to repeat the reading they just missed, rather
+   * than for an answer. A hit here advances the drill and is recorded
+   * nowhere: it was read off the screen, not recalled.
+   */
+  private repeating = false;
   private error: string | null = null;
 
   private shownAt = 0;
@@ -166,7 +176,7 @@ export class DrillSession {
         this.liveHypotheses = [...this.liveHypotheses, h];
         this.emit();
       },
-      onMatch: (h) => this.finishCard('match', h),
+      onMatch: (h) => (this.repeating ? this.resume() : this.finishCard('match', h)),
       onLateMatch: (h) => this.recordLateMatch(h),
       onWitness: (transcript) => {
         this.liveWitness = [...this.liveWitness, transcript];
@@ -264,6 +274,10 @@ export class DrillSession {
   resume(): void {
     if (!this.awaitingContinue) return;
     this.awaitingContinue = false;
+    this.repeating = false;
+    this.recognizer.disarm();
+    this.detector.disarm();
+    this.recognizer.flush?.();
     this.nextCard();
   }
 
@@ -310,6 +324,7 @@ export class DrillSession {
     this.liveWitness = [];
     this.lastStatus = null;
     this.awaitingContinue = false;
+    this.repeating = false;
     this.shownAt = performance.now();
 
     this.detector.arm((onsetMs) => {
@@ -359,11 +374,28 @@ export class DrillSession {
     this.emit();
     this.opts.onOutcome?.(this.outcomes[this.outcomes.length - 1]!);
 
-    if (this.awaitingContinue) return;
+    if (this.awaitingContinue) {
+      this.listenForRepeat(card);
+      return;
+    }
     this.advanceTimer = window.setTimeout(
       () => this.nextCard(),
       status === 'match' ? this.interCardMs : this.reviewPauseMs,
     );
+  }
+
+  /**
+   * Arm the same card again, as a repeat-after-me rather than a question.
+   * The live buffers are cleared first so the correction the learner is
+   * reading is about what they say now, not about the attempt that failed.
+   */
+  private listenForRepeat(card: DrillCard): void {
+    this.repeating = true;
+    this.liveHypotheses = [];
+    this.liveWitness = [];
+    this.detector.arm(() => {});
+    this.recognizer.expect(expectedFor(card, this.opts.longForms !== false), performance.now());
+    this.emit();
   }
 
   /** Speech ended after its card had already closed on a match. */
