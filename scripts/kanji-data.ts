@@ -54,10 +54,31 @@ interface Meta {
   kanji: string;
   jlpt?: number;
   freq_mainichi_shinbun?: number;
+  /** Alphabetically sorted by the package — see the note in `sensesOf`. */
   meanings?: string[];
+  /** Heisig's single keyword for the character. */
+  heisig_en?: string;
   on_readings?: string[];
   kun_readings?: string[];
 }
+
+/**
+ * Readings that survive every rule below but should not: on-readings that
+ * only live inside one place name or one archaism. There is no field marking
+ * them, so they are named here, and the list is meant to grow as they are
+ * found.
+ */
+const REJECTED: Record<string, string[]> = {
+  三: ['ぞう'],
+  上: ['しゃん'],          // only in 上海
+  二: ['ふたたび'],         // «again», a word, not a reading of «two»
+  円: ['まど', 'まろ'],
+  百: ['もも'],
+  十: ['そ'],
+  政: ['まん'],
+  済: ['わたし'],
+  号: ['よびな'],
+};
 
 const api = kanjiData as unknown as {
   get(k: string): Meta | undefined;
@@ -74,14 +95,50 @@ const api = kanjiData as unknown as {
  * freebie and teaches a reading nobody uses on its own.
  */
 function readingsOf(meta: Meta): string[] {
-  const raw = [...(meta.on_readings ?? []), ...(meta.kun_readings ?? [])];
+  const rejected = REJECTED[meta.kanji] ?? [];
   const out: string[] = [];
-  for (const r of raw) {
-    if (r.includes('-')) continue;
-    const base = toHiragana(r).split('.')[0] ?? '';
-    if (base && !out.includes(base)) out.push(base);
-  }
+
+  const take = (raw: string[], okurigana: boolean) => {
+    for (const r of raw) {
+      // A hyphen marks a bound form: «-か» for 日 exists only as a suffix.
+      if (r.includes('-')) continue;
+      // A dot marks okurigana. The stem before it is not a reading of the
+      // character on its own: 号's «さけ.ぶ» would accept «сакэ» for a
+      // character read ごう, and 済's «わた.る» would accept «вата».
+      if (!okurigana && r.includes('.')) continue;
+      const base = toHiragana(r).split('.')[0] ?? '';
+      // A reading ending in っ is a prefix form before gemination — 十's
+      // «じっ» exists only in じっぷん, never alone.
+      if (!base || base.endsWith('っ')) continue;
+      if (rejected.includes(base) || out.includes(base)) continue;
+      out.push(base);
+    }
+  };
+
+  take(meta.on_readings ?? [], false);
+  take(meta.kun_readings ?? [], false);
+  // Characters made in Japan (峠, 込) have no on-reading at all. For those the
+  // okurigana stem is the only reading there is, so take it rather than ship
+  // a card with no answer.
+  if (out.length === 0) take(meta.kun_readings ?? [], true);
   return out;
+}
+
+/**
+ * The senses, most useful first.
+ *
+ * `meanings` comes out of the package sorted **alphabetically**, which is why
+ * 日 used to lead with «Japan» and truncating to three lost «see» from 見 and
+ * «school» from 校 entirely. Heisig's keyword is one curated sense per
+ * character, so it leads; everything else follows, untruncated, so nothing
+ * can go missing again. Where Heisig's mnemonic differs from the everyday
+ * sense (校 → «exam»), the everyday one is still in the list behind it.
+ */
+function sensesOf(meta: Meta): string[] {
+  const all = (meta.meanings ?? []).filter((m) => !/\bradical\b|\(no\.\s*\d+\)/i.test(m));
+  const primary = meta.heisig_en;
+  if (!primary) return all;
+  return [primary, ...all.filter((m) => m.toLowerCase() !== primary.toLowerCase())];
 }
 
 const LEVELS = [5, 4, 3] as const;
@@ -112,12 +169,7 @@ for (const level of LEVELS) {
       dropped++;
       continue;
     }
-    // KANJIDIC mixes senses with notes about the character's role in the
-    // writing system — «one radical (no. 1)» says nothing about what 一
-    // means. Those are dropped; what is left is the actual sense.
-    const meanings = (meta.meanings ?? [])
-      .filter((m) => !/\bradical\b|\(no\.\s*\d+\)/i.test(m))
-      .slice(0, 3);
+    const meanings = sensesOf(meta);
     cards++;
     lines.push(
       `  { k: '${k}', n: ${level}, f: ${meta.freq_mainichi_shinbun ?? 0}, ` +
@@ -133,7 +185,8 @@ const header = `/**
  * package (MIT, derived from KANJIDIC2) and checked against the recogniser's
  * own word list — a reading it cannot say is not offered as an answer.
  *
- * A card is one character and accepts any of its on/kun readings. VISION.md
+ * A card is one character and accepts the readings it has on its own —
+ * okurigana stems, bound prefixes and suffixes are not among them. VISION.md
  * asks for readings inside real words, which is the right end state and needs
  * a vetted vocabulary list; deriving one from this dataset automatically
  * yields 五十 read 「い」 and 三人 read 「みたり」, archaic readings nobody should
@@ -150,7 +203,7 @@ export interface KanjiEntry {
   f: number;
   /** Accepted readings, in both scripts, filtered to the model's lexicon. */
   r: string[];
-  /** English meanings, at most three. */
+  /** English senses, the most useful one first. */
   m: string[];
 }
 

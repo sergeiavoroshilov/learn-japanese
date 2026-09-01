@@ -37,6 +37,28 @@ const MORA: Record<string, string> = {
 
 const SMALL_Y = new Set(['ゃ', 'ゅ', 'ょ']);
 const VOWELS = new Set(['а', 'и', 'у', 'э', 'о', 'я', 'ю', 'ё']);
+/** What a length mark repeats: я is a long а, not a second я. */
+const LENGTHENS: Record<string, string> = { я: 'а', ю: 'у', ё: 'о' };
+/** ん assimilates before these. */
+const LABIAL = new Set(['ば', 'び', 'ぶ', 'べ', 'ぼ', 'ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ', 'ま', 'み', 'む', 'め', 'も']);
+/** After ん, a vowel or a yotated mora needs a hard sign to stay separate. */
+const NEEDS_HARD_SIGN = new Set(['あ', 'い', 'う', 'え', 'お', 'や', 'ゆ', 'よ']);
+/**
+ * Vowels after which い is written й. Only а and э: あい and えい are the
+ * falling diphthongs Russian renders that way (такай, сэнсэй, токэй), while
+ * おい and うい are two separate vowels (おいしい — оисии) and いい is simply
+ * long (おおきい — оокии).
+ */
+const DIPHTHONG_BASE = new Set(['а', 'э']);
+/** Moras whose Cyrillic ends in the vowel that う lengthens. */
+const O_ROW = new Set([
+  'お', 'こ', 'そ', 'と', 'の', 'ほ', 'も', 'よ', 'ろ', 'ご', 'ぞ', 'ど', 'ぼ', 'ぽ',
+  'きょ', 'しょ', 'ちょ', 'にょ', 'ひょ', 'みょ', 'りょ', 'ぎょ', 'じょ', 'びょ', 'ぴょ',
+]);
+const U_ROW = new Set([
+  'う', 'く', 'す', 'つ', 'ぬ', 'ふ', 'む', 'ゆ', 'る', 'ぐ', 'ず', 'づ', 'ぶ', 'ぷ',
+  'きゅ', 'しゅ', 'ちゅ', 'にゅ', 'ひゅ', 'みゅ', 'りゅ', 'ぎゅ', 'じゅ', 'びゅ', 'ぴゅ',
+]);
 
 function toHiragana(s: string): string {
   return [...s]
@@ -59,28 +81,63 @@ function toHiragana(s: string): string {
 export function toKiriji(kana: string): string {
   const src = toHiragana(kana);
   let out = '';
+  /** The mora just written, so length marks know what they are lengthening. */
+  let previous = '';
+
   for (let i = 0; i < src.length; i++) {
     const ch = src[i]!;
     const next = src[i + 1];
+    const digraph = next && SMALL_Y.has(next) && MORA[ch + next] ? ch + next : null;
+    const mora = digraph ?? ch;
 
-    if (next && SMALL_Y.has(next) && MORA[ch + next]) {
-      out += MORA[ch + next];
-      i++;
-      continue;
-    }
     if (ch === 'っ') {
-      // Gemination: the following consonant is doubled. Written before the
-      // mora it belongs to, so it has to peek ahead.
-      const after = next && SMALL_Y.has(src[i + 2] ?? '') ? MORA[next + src[i + 2]!] : MORA[next ?? ''];
+      // Gemination doubles the consonant that follows, and it is written
+      // before the mora it belongs to, so it has to look ahead. Doubling the
+      // first Cyrillic letter is the whole rule: きって → киттэ, まっちゃ →
+      // маття, よっつ → ёццу.
+      const ahead = next && SMALL_Y.has(src[i + 2] ?? '') ? next + src[i + 2]! : (next ?? '');
+      const after = MORA[ahead];
       if (after) out += after[0];
       continue;
     }
+
     if (ch === 'ー') {
       const last = out.at(-1);
-      if (last && VOWELS.has(last)) out += last;
+      if (last && VOWELS.has(last)) out += LENGTHENS[last] ?? last;
       continue;
     }
-    out += MORA[ch] ?? ch;
+
+    if (ch === 'ん') {
+      // Before a labial ん is written м — симбун, сэмпай — and before a vowel
+      // or a yotated mora it needs a hard sign to keep the syllables apart:
+      // хонъя, not хоня.
+      out += next && LABIAL.has(next) ? 'м' : 'н';
+      if (next && NEEDS_HARD_SIGN.has(next)) out += 'ъ';
+      previous = ch;
+      continue;
+    }
+
+    if (ch === 'い' && DIPHTHONG_BASE.has(out.at(-1) ?? '')) {
+      // い after another vowel is a diphthong, and Russian writes it with й:
+      // сэнсэй, токэй, сэмпай, такай. Only after и does it stay и —
+      // おいしい is оисии, not оисий.
+      out += 'й';
+      previous = ch;
+      continue;
+    }
+
+    if (ch === 'う' && (O_ROW.has(previous) || U_ROW.has(previous))) {
+      // おう and うう are length, not a diphthong. Writing «гаккоу» would have
+      // the learner pronounce an о and then a у, which is not the word.
+      const last = out.at(-1);
+      if (last && VOWELS.has(last)) out += LENGTHENS[last] ?? last;
+      previous = ch;
+      continue;
+    }
+
+    out += MORA[mora] ?? mora;
+    previous = mora;
+    if (digraph) i++;
   }
   return out;
 }

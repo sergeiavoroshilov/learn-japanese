@@ -29,9 +29,7 @@ describe('toKiriji', () => {
   test('joins moras into words', () => {
     expect(toKiriji('やま')).toBe('яма');
     expect(toKiriji('にほん')).toBe('нихон');
-    // う after a mora in the о-row is left as a plain vowel rather than a
-    // length mark: гаккоу is what a beginner can act on.
-    expect(toKiriji('がっこう')).toBe('гаккоу');
+    expect(toKiriji('がっこう')).toBe('гаккоо');
   });
 
   test('っ doubles the consonant that follows it', () => {
@@ -47,5 +45,47 @@ describe('toKiriji', () => {
 
   test('anything unknown is passed through, not swallowed', () => {
     expect(toKiriji('日')).toBe('日');
+  });
+});
+
+describe('length and assimilation', () => {
+  test('えい is a long e, written with й as Russian does', () => {
+    expect(toKiriji('せんせい')).toBe('сэнсэй');
+    expect(toKiriji('とけい')).toBe('токэй');
+  });
+
+  test('おう and うう are length, not a diphthong', () => {
+    // «гаккоу» would have the learner say an о and then a у, which is not
+    // the word; the vowel is simply long.
+    expect(toKiriji('がっこう')).toBe('гаккоо');
+    expect(toKiriji('とうきょう')).toBe('тоокёо');
+    expect(toKiriji('ゆうめい')).toBe('юумэй');
+  });
+
+  test('ん becomes м before a labial', () => {
+    expect(toKiriji('しんぶん')).toBe('симбун');
+    expect(toKiriji('せんぱい')).toBe('сэмпай');
+  });
+
+  test('ん takes a hard sign before a vowel or a yotated mora', () => {
+    // Without it хонъや reads as хо-ня, a different word.
+    expect(toKiriji('ほんや')).toBe('хонъя');
+    expect(toKiriji('しんいち')).toBe('синъити');
+  });
+
+  test('gemination doubles the first letter of the mora that follows', () => {
+    expect(toKiriji('まっちゃ')).toBe('маття');
+    expect(toKiriji('よっつ')).toBe('ёццу');
+  });
+
+  test('い is й only where Russian actually writes it so', () => {
+    expect(toKiriji('たかい')).toBe('такай');
+    // おい and いい are not diphthongs: two vowels, and a long one.
+    expect(toKiriji('おいしい')).toBe('оисии');
+    expect(toKiriji('おおきい')).toBe('оокии');
+  });
+
+  test('a length mark after a yotated mora repeats the vowel, not the yot', () => {
+    expect(toKiriji('ジャー')).toBe('дзяа');
   });
 });

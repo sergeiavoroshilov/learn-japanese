@@ -54,7 +54,20 @@ describe('curriculum', () => {
     expect(hi.reading).toContain('にち');
     expect(hi.romaji).toContain('nichi');
     expect(hi.kiriji).toContain('нити');
-    expect(hi.meaning?.primary).toBe('Japan');
+    // «day», not «Japan»: the dataset's senses are sorted alphabetically, so
+    // the primary comes from Heisig's keyword instead of that order.
+    expect(hi.meaning?.primary).toBe('day');
+    expect(hi.meaning?.extra).toContain('sun');
+  });
+
+  test('bound readings are not accepted answers', () => {
+    const n5 = LEVELS.find((l) => l.id === 'kanji-n5')!.cards;
+    // 十's «じっ» only exists before gemination, and 号's «さけ» is the stem of
+    // 号ぶ — accepting it would pass a learner who said «сакэ».
+    expect(n5.find((c) => c.glyph === '十')!.readings).not.toContain('じっ');
+    const kanji = LEVELS.flatMap((l) => l.cards).filter((c) => c.kind === 'kanji');
+    expect(kanji.every((c) => c.readings.every((r) => !r.endsWith('っ')))).toBe(true);
+    expect(kanji.every((c) => c.readings.length > 0)).toBe(true);
   });
 
   test('kanji are ordered by how often they appear in print', () => {
