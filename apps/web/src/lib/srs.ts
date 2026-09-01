@@ -117,10 +117,25 @@ export interface Applied {
 
 export function applyAnswer(
   progress: CardProgress,
-  answer: { quality: AnswerQuality; onsetMs: number | null; repeated?: boolean },
+  answer: {
+    quality: AnswerQuality;
+    onsetMs: number | null;
+    repeated?: boolean;
+    /**
+     * A second look at the same card inside one session. It still measures
+     * latency and still counts pronunciation slips, but it must not reach
+     * the scheduler: FSRS asks «how much has been forgotten since last
+     * time», and the answer a minute later is always «nothing». Four correct
+     * answers in one minute would read as a very stable memory, which is the
+     * opposite of what a card being drilled repeatedly means.
+     */
+    practice?: boolean;
+  },
   now: Date,
 ): Applied {
-  const rating = ratingFor(answer.quality, answer.onsetMs, { repeated: answer.repeated });
+  const rating = answer.practice
+    ? null
+    : ratingFor(answer.quality, answer.onsetMs, { repeated: answer.repeated });
   const next: CardProgress = {
     ...progress,
     unplaced: progress.unplaced + (answer.quality === 'unplaced' ? 1 : 0),

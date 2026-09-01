@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { currentLevel, type LevelProgress } from '../lib/curriculum';
+import { UNLOCK_SHARE, currentLevel, type LevelProgress } from '../lib/curriculum';
 import { serialize, type ProgressStore, type Settings } from '../lib/store';
 import { percent } from './format';
 
@@ -97,13 +97,19 @@ export function Home({
               Начать
             </button>
             <p className="note-inline">
+              {/* New glyphs repeat inside the session, so the card count and
+                  the number of distinct glyphs are different things. */}
               {[
                 plannedDue > 0 ? `${plannedDue} на повторение` : null,
-                plannedNew > 0 ? `${plannedNew} новых` : null,
+                plannedNew > 0
+                  ? `${plannedNew} новых${current ? ` из «${current.level.label}»` : ''}` +
+                    (plannedDue + plannedNew < settings.sessionSize
+                      ? `, с повторами внутри сессии — ${settings.sessionSize} карточек`
+                      : '')
+                  : null,
               ]
                 .filter(Boolean)
                 .join(' · ')}
-              {current && plannedNew > 0 ? ` из «${current.level.label}»` : ''}
             </p>
           </>
         )}
@@ -117,9 +123,12 @@ export function Home({
           ))}
         </div>
         <p className="note-inline">
-          Новые символы берутся только из текущего уровня — следующий
-          открывается, когда этот выучен на {percent(0.9)}. Повторения при этом
-          идут со всех пройденных.
+          Число — сколько символов уровня уже знакомо; тёмная часть полосы —
+          сколько из них выучено. Символ считается выученным, когда его
+          вспомнили верно во <b>второй раз, на следующий день или позже</b>:
+          один быстрый ответ подряд ещё ничего не говорит о памяти. Следующий
+          уровень открывается на {percent(UNLOCK_SHARE)} выученных, а
+          повторения идут со всех пройденных.
         </p>
       </div>
 
@@ -231,16 +240,24 @@ export function Home({
           {level.complete ? ' ✓' : ''}
         </span>
         <span className="level-count">
-          {level.unlocked ? `${level.learned} / ${level.total}` : 'закрыт'}
+          {level.unlocked ? `${level.learned + level.learning} / ${level.total}` : 'закрыт'}
         </span>
         {level.unlocked && (
+          // Two segments: what is learned, and what has been met and is on
+          // its way. A bar that only moved on «learned» would sit at zero
+          // through the whole first day, however much was drilled.
           <div className="bar">
             <div className="bar-fill" style={{ width: percent(level.share) }} />
+            <div
+              className="bar-fill soft"
+              style={{ width: percent(level.learning / Math.max(1, level.total)) }}
+            />
           </div>
         )}
         {current && (
           <span className="level-note">
             {level.level.note}
+            {level.learning > 0 ? ` · в работе ${level.learning}` : ''}
             {level.due > 0 ? ` · ${level.due} к повторению` : ''}
           </span>
         )}

@@ -150,3 +150,38 @@ describe('mispronunciation', () => {
     expect(wrong.progress.fsrs.stability).toBeLessThan(before.progress.fsrs.stability);
   });
 });
+
+describe('practice answers', () => {
+  test('a second look inside one session does not move the schedule', () => {
+    const first = applyAnswer(newProgress('a', NOW), { quality: 'correct', onsetMs: 700 }, NOW);
+    const again = applyAnswer(
+      first.progress,
+      { quality: 'correct', onsetMs: 500, practice: true },
+      NOW,
+    );
+    expect(again.rating).toBeNull();
+    expect(again.progress.fsrs.due).toEqual(first.progress.fsrs.due);
+    expect(again.progress.fsrs.stability).toBe(first.progress.fsrs.stability);
+  });
+
+  test('but it is still measured — that is why it is worth doing', () => {
+    const first = applyAnswer(newProgress('a', NOW), { quality: 'correct', onsetMs: 1800 }, NOW);
+    const again = applyAnswer(
+      first.progress,
+      { quality: 'correct', onsetMs: 600, practice: true },
+      NOW,
+    );
+    expect(again.progress.bestOnsetMs).toBe(600);
+    expect(again.progress.avgOnsetMs).toBeLessThan(1800);
+  });
+
+  test('four right answers in a minute do not read as a stable memory', () => {
+    let p = applyAnswer(newProgress('a', NOW), { quality: 'correct', onsetMs: 500 }, NOW).progress;
+    const afterFirst = p.fsrs.stability;
+    for (let i = 0; i < 3; i++) {
+      p = applyAnswer(p, { quality: 'correct', onsetMs: 500, practice: true }, NOW).progress;
+    }
+    expect(p.fsrs.stability).toBe(afterFirst);
+    expect(p.fsrs.reps).toBe(1);
+  });
+});

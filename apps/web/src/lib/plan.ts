@@ -63,10 +63,31 @@ export function planSession(
     .slice(0, Math.max(0, Math.min(opts.newLimit, opts.size - due.length)));
 
   return {
-    cards: shuffle([...due, ...fresh]),
+    cards: fill(shuffle([...due, ...fresh]), fresh, opts.size),
     due: due.length,
     fresh: fresh.length,
     fromLevel: fresh.length > 0 ? (level?.level.id ?? null) : null,
     excluded,
   };
+}
+
+/**
+ * Pad the session out to the requested length by showing the new glyphs
+ * again.
+ *
+ * A glyph met for the first time needs several looks in one sitting; a review
+ * needs one, which is the whole point of scheduling it. So only the new ones
+ * repeat — a session of three due cards stays three cards long, because
+ * asking them seven times each would teach nothing.
+ */
+function fill(cards: DrillCard[], fresh: DrillCard[], size: number): DrillCard[] {
+  if (fresh.length === 0 || cards.length >= size) return cards;
+  const out = [...cards];
+  while (out.length < size) {
+    const round = shuffle(fresh);
+    // Never twice in a row across a round boundary.
+    if (round.length > 1 && round[0]!.id === out[out.length - 1]!.id) round.push(round.shift()!);
+    out.push(...round);
+  }
+  return out.slice(0, size);
 }

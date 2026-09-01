@@ -120,8 +120,12 @@ input[type='number'], select {
 .level.locked .level-name, .level.locked .level-note { color: var(--muted); }
 .level.current .level-name { font-weight: 600; }
 
-.bar { grid-column: 1 / -1; height: 4px; background: var(--line); border-radius: 999px; overflow: hidden; }
-.bar-fill { height: 100%; background: var(--accent); border-radius: 999px; }
+.bar {
+  grid-column: 1 / -1; height: 4px; background: var(--line);
+  border-radius: 999px; overflow: hidden; display: flex;
+}
+.bar-fill { height: 100%; background: var(--accent); }
+.bar-fill.soft { background: var(--accent); opacity: 0.3; }
 .level.done .bar-fill { background: var(--ok); }
 
 /* drill stage */

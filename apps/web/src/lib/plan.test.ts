@@ -42,13 +42,14 @@ function plan(states: Record<string, CardProgress>, over: Partial<Parameters<typ
 describe('planSession', () => {
   test('a beginner gets new glyphs from the first level only', () => {
     const built = plan({});
-    expect(built.cards).toHaveLength(5);
     expect(built.fresh).toBe(5);
+    expect(new Set(built.cards.map((c) => c.id)).size).toBe(5);
     expect(built.fromLevel).toBe('hira-basic');
   });
 
   test('new glyphs arrive in the level order, not at random', () => {
-    expect(plan({}, { newLimit: 3 }).cards.map((c) => c.glyph).sort()).toEqual(['あ', 'い', 'う']);
+    const glyphs = new Set(plan({}, { newLimit: 3 }).cards.map((c) => c.glyph));
+    expect([...glyphs].sort()).toEqual(['あ', 'い', 'う']);
   });
 
   test('nothing due and nothing new leaves an empty session', () => {
@@ -96,5 +97,38 @@ describe('planSession', () => {
     const states = Object.fromEntries(HIRA.map((c) => [c.id, scheduled(c.id)]));
     expect(plan(states, { size: 3 }).cards).toHaveLength(0);
     expect(plan(states, { size: 3, mode: 'free' }).cards).toHaveLength(3);
+  });
+});
+
+describe('session length', () => {
+  test('new glyphs repeat to fill the session the settings asked for', () => {
+    // Five new cards and a twenty-card session: a glyph met for the first
+    // time is worth several looks in one sitting.
+    const built = plan({}, { size: 20, newLimit: 5 });
+    expect(built.cards).toHaveLength(20);
+    expect(new Set(built.cards.map((c) => c.id)).size).toBe(5);
+    expect(built.fresh).toBe(5);
+  });
+
+  test('the same glyph never comes twice in a row', () => {
+    const cards = plan({}, { size: 20, newLimit: 5 }).cards;
+    for (let i = 1; i < cards.length; i++) {
+      expect(cards[i]!.id).not.toBe(cards[i - 1]!.id);
+    }
+  });
+
+  test('reviews do not repeat — asking them seven times teaches nothing', () => {
+    const states: Record<string, CardProgress> = {};
+    HIRA.slice(0, 3).forEach((c) => (states[c.id] = overdue(c.id, 1)));
+    HIRA.slice(3).forEach((c) => (states[c.id] = scheduled(c.id)));
+    const built = plan(states, { size: 20, newLimit: 5 });
+    expect(built.cards).toHaveLength(3);
+    expect(built.due).toBe(3);
+  });
+
+  test('one new glyph still fills a session', () => {
+    const built = plan({}, { size: 8, newLimit: 1 });
+    expect(built.cards).toHaveLength(8);
+    expect(new Set(built.cards.map((c) => c.id)).size).toBe(1);
   });
 });

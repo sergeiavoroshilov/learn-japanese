@@ -77,6 +77,8 @@ export function Trainer() {
 
   const sessionRef = useRef<DrillSession | null>(null);
   const requeuesRef = useRef(new Map<string, number>());
+  /** Cards already sent to the scheduler in this session. */
+  const gradedRef = useRef(new Set<string>());
   /**
    * Cards still being taught rather than tested. Frozen when the session
    * starts: a card must not stop showing its reading halfway through, in the
@@ -120,6 +122,7 @@ export function Trainer() {
 
     sessionRef.current?.stop();
     requeuesRef.current = new Map();
+    gradedRef.current = new Set();
     setResults([]);
     setPlan(built);
     setFailure(null);
@@ -155,9 +158,15 @@ export function Trainer() {
         const quality = classify(facts);
         const before = store.progressFor(outcome.card.id, at);
         const introduced = isNew(before);
+        // Only the first answer to a card moves its schedule. The rest of
+        // the session is practice: it sharpens the glyph and is measured,
+        // but FSRS must not read «answered right four times in a minute» as
+        // a memory that has held for a minute.
+        const practice = gradedRef.current.has(outcome.card.id);
+        gradedRef.current.add(outcome.card.id);
         const applied = applyAnswer(
           before,
-          { quality, onsetMs: outcome.onsetMs, repeated: facts.repeated },
+          { quality, onsetMs: outcome.onsetMs, repeated: facts.repeated, practice },
           at,
         );
         store.record(applied.progress, {
