@@ -179,3 +179,33 @@ describe('practice fills the idle days', () => {
     expect(built.cards).toHaveLength(20);
   });
 });
+
+describe('practice goes where the work is', () => {
+  test('unlearned glyphs come before learned ones, whatever their due dates', () => {
+    // The failure this guards: a glyph is unlearned mostly because the
+    // answers were slow, slow glyphs get answered often, and being answered
+    // often pushes the due date out. Sorted by due date alone, the cards that
+    // needed the work sat at the back of the queue and the level froze.
+    const states: Record<string, CardProgress> = {};
+    const stuck = HIRA.slice(0, 5);
+    const done = HIRA.slice(5, 25);
+    // Slow but answered many times, so due far out.
+    for (const c of stuck) {
+      let p = newProgress(c.id, NOW);
+      for (let i = 0; i < 4; i++) {
+        p = applyAnswer(p, { quality: 'correct', onsetMs: 2600, firstThisSession: true }, NOW)
+          .progress;
+      }
+      states[c.id] = { ...p, fsrs: { ...p.fsrs, due: new Date(NOW.getTime() + 90 * 86_400_000) } };
+    }
+    // Learned, and due sooner.
+    for (const c of done) {
+      const p = learned(c.id);
+      states[c.id] = { ...p, fsrs: { ...p.fsrs, due: new Date(NOW.getTime() + 5 * 86_400_000) } };
+    }
+
+    const built = plan(states, { size: 10, newLimit: 0 });
+    const picked = new Set(built.cards.map((c) => c.id));
+    for (const c of stuck) expect(picked.has(c.id)).toBe(true);
+  });
+});

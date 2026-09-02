@@ -1,6 +1,6 @@
 import type { DrillCard } from './card';
 import { LEVELS, type Level } from './levels';
-import { isDue, isLearned, isNew, type CardProgress } from './srs';
+import { LATENCY_GOOD_MS, LEARNED_MIN_SESSIONS, isDue, isLearned, isNew, type CardProgress } from './srs';
 
 export type ProgressLookup = (id: string) => CardProgress;
 
@@ -30,6 +30,17 @@ export interface LevelProgress {
   unlocked: boolean;
   /** Everything here is learned; the level is behind them. */
   complete: boolean;
+  /**
+   * Why the glyphs that are met but not learned are not learned yet, so the
+   * level can say what is holding it rather than leaving «why is this not
+   * moving» to be guessed at.
+   */
+  blocked: {
+    /** Answered right, but not yet in two sessions running. */
+    sessions: number;
+    /** Answered right and too slowly to count as read. */
+    slow: number;
+  };
 }
 
 /**
@@ -51,12 +62,23 @@ export function curriculum(progressFor: ProgressLookup, now: Date): LevelProgres
     let learning = 0;
     let learned = 0;
     let due = 0;
+    let slow = 0;
+    let sessions = 0;
 
     for (const card of cards) {
       const progress = progressFor(card.id);
       if (isNew(progress)) fresh++;
       else if (isLearned(progress)) learned++;
-      else learning++;
+      else {
+        learning++;
+        // A glyph can be short of the gate for two quite different reasons,
+        // and they call for different things: come back tomorrow, or say it
+        // faster.
+        if (progress.avgOnsetMs !== null && progress.avgOnsetMs >= LATENCY_GOOD_MS) slow++;
+        else if ((progress.correctSessions ?? progress.fsrs.reps) < LEARNED_MIN_SESSIONS) {
+          sessions++;
+        }
+      }
       if (!isNew(progress) && isDue(progress, now)) due++;
     }
 
@@ -72,6 +94,7 @@ export function curriculum(progressFor: ProgressLookup, now: Date): LevelProgres
       share,
       unlocked: previousComplete,
       complete,
+      blocked: { sessions, slow },
     });
     previousComplete = previousComplete && complete;
   }

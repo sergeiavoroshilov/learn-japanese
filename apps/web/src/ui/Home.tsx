@@ -261,9 +261,16 @@ export function Home({
         )}
         {level.unlocked && (level.learning > 0 || level.due > 0 || current) && (
           <span className="level-note">
-            {current ? level.level.note : ''}
-            {level.learning > 0 ? `${current ? ' · ' : ''}в работе ${level.learning}` : ''}
-            {level.due > 0 ? ` · ${level.due} к повторению` : ''}
+            {[
+              current ? level.level.note : null,
+              level.blocked.sessions > 0
+                ? `${level.blocked.sessions} ждут второй сессии`
+                : null,
+              level.blocked.slow > 0 ? `${level.blocked.slow} медленнее двух секунд` : null,
+              level.due > 0 ? `${level.due} к повторению` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </span>
         )}
       </div>

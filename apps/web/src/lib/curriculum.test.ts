@@ -133,3 +133,34 @@ describe('curriculum', () => {
     expect(currentLevel(state)).toBeNull();
   });
 });
+
+describe('what is holding a level', () => {
+  test('names the two reasons apart, because they call for different things', () => {
+    const states: Record<string, CardProgress> = {};
+    const cards = LEVELS[0]!.cards;
+    // Answered right once: needs another session, nothing else.
+    states[cards[0]!.id] = applyAnswer(
+      newProgress(cards[0]!.id, NOW),
+      { quality: 'correct', onsetMs: 700, firstThisSession: true },
+      NOW,
+    ).progress;
+    // Answered right in two sessions but slowly: needs to be said faster.
+    let slow = newProgress(cards[1]!.id, NOW);
+    for (let i = 0; i < 2; i++) {
+      slow = applyAnswer(slow, { quality: 'correct', onsetMs: 2800, firstThisSession: true }, NOW)
+        .progress;
+    }
+    states[cards[1]!.id] = slow;
+
+    const level = curriculum(lookup(states), NOW)[0]!;
+    expect(level.learned).toBe(0);
+    expect(level.learning).toBe(2);
+    expect(level.blocked).toEqual({ sessions: 1, slow: 1 });
+  });
+
+  test('a learned level has nothing holding it', () => {
+    const states: Record<string, CardProgress> = {};
+    learnLevel(states, 0);
+    expect(curriculum(lookup(states), NOW)[0]!.blocked).toEqual({ sessions: 0, slow: 0 });
+  });
+});

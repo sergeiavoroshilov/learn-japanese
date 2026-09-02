@@ -87,6 +87,7 @@ export function Trainer() {
    * middle of the very repeat that is teaching it.
    */
   const [teaching, setTeaching] = useState<Set<string>>(new Set());
+  const teachingRef = useRef<Set<string>>(new Set());
   const wakeLockRef = useRef<ScreenWakeLock | null>(null);
   wakeLockRef.current ??= new ScreenWakeLock();
   const [wakeLock, setWakeLock] = useState<WakeLockState>('idle');
@@ -127,13 +128,16 @@ export function Trainer() {
     scheduledRef.current = built.scheduled;
     setResults([]);
     setFailure(null);
-    setTeaching(
-      new Set(
-        built.cards
-          .filter((c) => store.progressFor(c.id, now).fsrs.reps < TEACH_REPS)
-          .map((c) => c.id),
-      ),
+    // Held in a ref as well as in state: the outcome handler below is
+    // created now and would otherwise close over the empty set from before
+    // this call, marking every answer as unassisted.
+    const beingTaught = new Set(
+      built.cards
+        .filter((c) => store.progressFor(c.id, now).fsrs.reps < TEACH_REPS)
+        .map((c) => c.id),
     );
+    teachingRef.current = beingTaught;
+    setTeaching(beingTaught);
     setScreen('drill');
 
     const session = new DrillSession({
@@ -181,7 +185,7 @@ export function Trainer() {
             quality,
             onsetMs: outcome.onsetMs,
             repeated: facts.repeated,
-            assisted: teaching.has(outcome.card.id),
+            assisted: teachingRef.current.has(outcome.card.id),
             firstThisSession: !seenBefore,
             practice,
           },

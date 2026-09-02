@@ -1,7 +1,7 @@
 import type { DrillCard } from './card';
 import { currentLevel, reachedCards, type LevelProgress, type ProgressLookup } from './curriculum';
 import { shuffle } from './kana';
-import { isDue, isNew } from './srs';
+import { isDue, isLearned, isNew } from './srs';
 
 export interface SessionPlan {
   cards: DrillCard[];
@@ -75,12 +75,24 @@ export function planSession(
    * from waiting, and there is nothing to be gained by sitting idle for three
    * days with five glyphs learned. So the interval is a deadline, not a
    * quarantine: practise as much as you like before it.
+   *
+   * Not-yet-learned glyphs come first, and only then the due date. Sorting by
+   * due date alone froze the level: a glyph is unlearned mostly because the
+   * answers were slow, slow glyphs have been answered *often*, and being
+   * answered often pushes the due date out — so the cards that needed the
+   * work were last in a queue ordered by exactly the wrong thing.
    */
+  const rank = (card: DrillCard) => {
+    const progress = progressFor(card.id);
+    return [isLearned(progress) ? 1 : 0, progress.fsrs.due.getTime()] as const;
+  };
   const idle = usable
     .filter((c) => !scheduled.has(c.id) && !isNew(progressFor(c.id)))
-    .sort(
-      (a, b) => progressFor(a.id).fsrs.due.getTime() - progressFor(b.id).fsrs.due.getTime(),
-    )
+    .sort((a, b) => {
+      const [aLearned, aDue] = rank(a);
+      const [bLearned, bDue] = rank(b);
+      return aLearned - bLearned || aDue - bDue;
+    })
     .slice(0, Math.max(0, opts.size - scheduled.size));
 
   return {
