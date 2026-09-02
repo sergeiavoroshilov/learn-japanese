@@ -128,12 +128,11 @@ export function Home({
           ))}
         </div>
         <p className="note-inline">
-          Число — сколько символов уровня уже знакомо; тёмная часть полосы —
-          сколько из них выучено. Символ считается выученным, когда его
-          вспомнили верно во <b>второй раз, на следующий день или позже</b>:
-          один быстрый ответ подряд ещё ничего не говорит о памяти. Следующий
-          уровень открывается на {percent(UNLOCK_SHARE)} выученных, а
-          повторения идут со всех пройденных.
+          Символ считается выученным, когда назван верно <b>в двух сессиях
+          подряд</b> и <b>быстрее двух секунд</b>: то, что вспоминается дольше,
+          ещё не читается. Промах обнуляет счёт. Насечка на полосе — {percent(UNLOCK_SHARE)},
+          на которых открывается следующий уровень; бледная часть — знакомое,
+          но ещё не беглое. Повторения идут со всех пройденных уровней.
         </p>
       </div>
 
@@ -245,24 +244,25 @@ export function Home({
           {level.complete ? ' ✓' : ''}
         </span>
         <span className="level-count">
-          {level.unlocked ? `${level.learned + level.learning} / ${level.total}` : 'закрыт'}
+          {level.unlocked ? `${level.learned} / ${level.total}` : 'закрыт'}
         </span>
         {level.unlocked && (
-          // Two segments: what is learned, and what has been met and is on
-          // its way. A bar that only moved on «learned» would sit at zero
-          // through the whole first day, however much was drilled.
+          // Solid is learned — the number the gate reads. Faint is met and on
+          // its way. The notch marks where the next level opens, so «why is
+          // it still shut» has an answer on the screen.
           <div className="bar">
             <div className="bar-fill" style={{ width: percent(level.share) }} />
             <div
               className="bar-fill soft"
               style={{ width: percent(level.learning / Math.max(1, level.total)) }}
             />
+            <div className="bar-gate" style={{ left: percent(UNLOCK_SHARE) }} />
           </div>
         )}
-        {current && (
+        {level.unlocked && (level.learning > 0 || level.due > 0 || current) && (
           <span className="level-note">
-            {level.level.note}
-            {level.learning > 0 ? ` · в работе ${level.learning}` : ''}
+            {current ? level.level.note : ''}
+            {level.learning > 0 ? `${current ? ' · ' : ''}в работе ${level.learning}` : ''}
             {level.due > 0 ? ` · ${level.due} к повторению` : ''}
           </span>
         )}

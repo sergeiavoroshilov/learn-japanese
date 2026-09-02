@@ -93,6 +93,16 @@ export interface CardProgress {
   unplaced: number;
   /** Times a nameable pronunciation slip was heard on this mora. */
   mispronounced: number;
+  /**
+   * Consecutive sessions this card was answered correctly in, counted once
+   * per session and reset by a miss.
+   *
+   * Separate from the FSRS review count on purpose. FSRS answers «when will
+   * this be forgotten» and only a review near its due date informs that, so
+   * its counter moves once every few days. Whether a glyph can be *read* is
+   * observable now, and this is what the syllabus gate uses.
+   */
+  correctSessions: number;
 }
 
 export function newProgress(id: string, now: Date): CardProgress {
@@ -105,6 +115,7 @@ export function newProgress(id: string, now: Date): CardProgress {
     avgOnsetMs: null,
     unplaced: 0,
     mispronounced: 0,
+    correctSessions: 0,
   };
 }
 
@@ -126,6 +137,8 @@ export function applyAnswer(
     repeated?: boolean;
     /** The reading was on screen while this was answered. */
     assisted?: boolean;
+    /** The first answer to this card in the current session. */
+    firstThisSession?: boolean;
     /**
      * A second look at the same card inside one session. It still measures
      * latency and still counts pronunciation slips, but it must not reach
@@ -148,6 +161,7 @@ export function applyAnswer(
     ...progress,
     unplaced: progress.unplaced + (answer.quality === 'unplaced' ? 1 : 0),
     mispronounced: progress.mispronounced + (answer.quality === 'mispronounced' ? 1 : 0),
+    correctSessions: nextSessions(progress, answer.quality, answer.firstThisSession === true),
   };
 
   if (answer.quality === 'correct' && answer.onsetMs !== null) {
@@ -187,21 +201,47 @@ export function retrievability(progress: CardProgress, now: Date): number {
 }
 
 /**
- * A glyph counts as learned once FSRS is willing to wait a week before asking
- * again — and only after it has come back at least once. The very first
- * answer, however fast, proves nothing about retention: no time had passed
- * for the glyph to be forgotten in. FSRS would happily hand a brand-new card
- * a two-week interval off one «Easy», and calling that «learned» would be the
- * same lie as a Duolingo streak.
+ * Progress written before this counter existed: FSRS's review count was once
+ * per session, so it is the honest stand-in.
  */
-export const LEARNED_STABILITY_DAYS = 7;
-const LEARNED_MIN_REPS = 2;
+function sessionsOf(progress: CardProgress): number {
+  return progress.correctSessions ?? progress.fsrs.reps;
+}
+
+/**
+ * The streak grows once per session and a real miss takes it to zero: having
+ * forgotten a glyph, you get to show it twice again.
+ *
+ * A sound the recogniser could not place, or a mora read right and said
+ * wrong, leaves it alone — neither is recall failing, which is the same line
+ * drawn everywhere else.
+ */
+function nextSessions(progress: CardProgress, quality: AnswerQuality, first: boolean): number {
+  if (quality === 'wrong' || quality === 'silent') return 0;
+  return sessionsOf(progress) + (quality === 'correct' && first ? 1 : 0);
+}
+
+/**
+ * A glyph counts as learned when it can be *read*: answered correctly in two
+ * different sessions, in under the two seconds that separate recall from
+ * working it out, and not in the middle of being relearned after a lapse.
+ *
+ * This deliberately does not ask FSRS. Its stability answers «when will this
+ * be forgotten», which only a review near the due date can inform — so it
+ * moves once every few days, and a gate built on it stayed shut for a learner
+ * who had drilled the whole table that afternoon. Two questions, two
+ * measures: FSRS schedules, latency says whether it is read.
+ *
+ * Two sessions rather than two answers, because four right answers in one
+ * sitting are one piece of evidence, not four.
+ */
+export const LEARNED_MIN_SESSIONS = 2;
 
 export function isLearned(progress: CardProgress): boolean {
   return (
-    progress.fsrs.state === State.Review &&
-    progress.fsrs.reps >= LEARNED_MIN_REPS &&
-    progress.fsrs.stability >= LEARNED_STABILITY_DAYS
+    sessionsOf(progress) >= LEARNED_MIN_SESSIONS &&
+    progress.avgOnsetMs !== null &&
+    progress.avgOnsetMs < LATENCY_GOOD_MS
   );
 }
 

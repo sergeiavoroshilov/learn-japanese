@@ -5,11 +5,12 @@ import { applyAnswer, newProgress, type CardProgress } from './srs';
 
 const NOW = new Date('2026-09-01T09:00:00Z');
 
-/** A card answered right twice, far enough apart that FSRS calls it learned. */
+/** A card answered right in two separate sessions, quickly. */
 function learnedCard(id: string): CardProgress {
-  const first = applyAnswer(newProgress(id, NOW), { quality: 'correct', onsetMs: 500 }, NOW);
-  const later = new Date(first.progress.fsrs.due);
-  return applyAnswer(first.progress, { quality: 'correct', onsetMs: 500 }, later).progress;
+  // Two separate sessions, which is what «learned» means now.
+  const answer = { quality: 'correct' as const, onsetMs: 500, firstThisSession: true };
+  const first = applyAnswer(newProgress(id, NOW), answer, NOW);
+  return applyAnswer(first.progress, answer, new Date(first.progress.fsrs.due)).progress;
 }
 
 function lookup(states: Record<string, CardProgress>) {

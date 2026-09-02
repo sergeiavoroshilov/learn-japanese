@@ -3,7 +3,6 @@ import { State } from 'ts-fsrs';
 import {
   LATENCY_EASY_MS,
   LATENCY_GOOD_MS,
-  LEARNED_STABILITY_DAYS,
   Rating,
   applyAnswer,
   isDue,
@@ -104,25 +103,56 @@ describe('applyAnswer', () => {
 });
 
 describe('isLearned', () => {
-  test('one fast answer is not enough, however long the interval it earns', () => {
-    const first = applyAnswer(newProgress('a', NOW), { quality: 'correct', onsetMs: 500 }, NOW);
-    expect(first.progress.fsrs.stability).toBeGreaterThan(LEARNED_STABILITY_DAYS);
-    expect(isLearned(first.progress)).toBe(false);
-  });
+  const session = (
+    p: ReturnType<typeof newProgress>,
+    over: Parameters<typeof applyAnswer>[1],
+    at = NOW,
+  ) => applyAnswer(p, { firstThisSession: true, ...over }, at).progress;
 
-  test('a glyph recalled again after the wait counts as learned', () => {
-    const first = applyAnswer(newProgress('a', NOW), { quality: 'correct', onsetMs: 500 }, NOW);
-    const later = new Date(first.progress.fsrs.due);
-    expect(isLearned(applyAnswer(first.progress, { quality: 'correct', onsetMs: 500 }, later).progress)).toBe(
-      true,
+  test('one session is not enough, however fast the answer', () => {
+    expect(isLearned(session(newProgress('a', NOW), { quality: 'correct', onsetMs: 500 }))).toBe(
+      false,
     );
   });
 
-  test('failing it again drops it back out', () => {
+  test('two sessions of quick correct answers is enough — no waiting for days', () => {
+    // The gate must not be bound to the calendar: someone who drilled the
+    // whole table this afternoon has learned it.
+    let p = session(newProgress('a', NOW), { quality: 'correct', onsetMs: 500 });
+    p = session(p, { quality: 'correct', onsetMs: 600 });
+    expect(p.correctSessions).toBe(2);
+    expect(isLearned(p)).toBe(true);
+  });
+
+  test('four right answers in one session are one piece of evidence, not four', () => {
+    let p = session(newProgress('a', NOW), { quality: 'correct', onsetMs: 500 });
+    for (let i = 0; i < 3; i++) {
+      p = applyAnswer(p, { quality: 'correct', onsetMs: 500, practice: true }, NOW).progress;
+    }
+    expect(p.correctSessions).toBe(1);
+    expect(isLearned(p)).toBe(false);
+  });
+
+  test('right but slow is not learned — that is the whole premise', () => {
+    let p = session(newProgress('a', NOW), { quality: 'correct', onsetMs: 2600 });
+    p = session(p, { quality: 'correct', onsetMs: 2600 });
+    expect(isLearned(p)).toBe(false);
+  });
+
+  test('a lapse drops it back out until it is relearned', () => {
+    let p = session(newProgress('a', NOW), { quality: 'correct', onsetMs: 500 });
+    p = session(p, { quality: 'correct', onsetMs: 500 });
+    expect(isLearned(p)).toBe(true);
+    const later = new Date(p.fsrs.due);
+    expect(isLearned(session(p, { quality: 'wrong', onsetMs: null }, later))).toBe(false);
+  });
+
+  test('progress saved before the counter existed falls back to FSRS reps', () => {
     const first = applyAnswer(newProgress('a', NOW), { quality: 'correct', onsetMs: 500 }, NOW);
     const later = new Date(first.progress.fsrs.due);
-    const lapsed = applyAnswer(first.progress, { quality: 'wrong', onsetMs: null }, later);
-    expect(isLearned(lapsed.progress)).toBe(false);
+    const twice = applyAnswer(first.progress, { quality: 'correct', onsetMs: 500 }, later).progress;
+    const legacy = { ...twice, correctSessions: undefined } as unknown as typeof twice;
+    expect(isLearned(legacy)).toBe(true);
   });
 });
 

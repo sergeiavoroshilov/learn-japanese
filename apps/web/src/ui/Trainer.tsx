@@ -184,6 +184,7 @@ export function Trainer() {
             onsetMs: outcome.onsetMs,
             repeated: facts.repeated,
             assisted: teaching.has(outcome.card.id),
+            firstThisSession: !seenBefore,
             practice,
           },
           at,
