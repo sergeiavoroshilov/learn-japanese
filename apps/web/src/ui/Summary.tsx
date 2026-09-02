@@ -21,10 +21,36 @@ const QUALITY_LABEL: Record<string, string> = {
 };
 
 export function Summary({ results, plan, onAgain, onHome }: Props) {
-  const correct = results.filter((r) => r.quality === 'correct');
-  const wrong = results.filter((r) => r.quality === 'wrong' || r.quality === 'silent');
-  const unplaced = results.filter((r) => r.quality === 'unplaced');
-  const slips = results.filter((r) => r.quality === 'mispronounced');
+  /**
+   * One line per card, from its first answer — the one that was graded.
+   *
+   * A card that came back after a miss produces two results, so counting
+   * answers made a twenty-card session report twenty-two of them. The tiles
+   * are about how the cards went; the table below still lists every answer,
+   * including the repeats.
+   */
+  const firstAnswers = useMemo(() => {
+    const seen = new Set<string>();
+    const out: CardResult[] = [];
+    for (const result of results) {
+      if (seen.has(result.card.id)) continue;
+      seen.add(result.card.id);
+      out.push(result);
+    }
+    return out;
+  }, [results]);
+  const repeats = results.length - firstAnswers.length;
+
+  const correct = firstAnswers.filter((r) => r.quality === 'correct');
+  const wrong = firstAnswers.filter((r) => r.quality === 'wrong' || r.quality === 'silent');
+  const unplaced = firstAnswers.filter((r) => r.quality === 'unplaced');
+  const slips = firstAnswers.filter((r) => r.quality === 'mispronounced');
+  /** Missed at first and right by the end of the session. */
+  const recovered = firstAnswers.filter(
+    (r) =>
+      r.quality !== 'correct' &&
+      results.some((o) => o.card.id === r.card.id && o.quality === 'correct'),
+  );
 
   const medianOnset = useMemo(
     () =>
@@ -35,8 +61,8 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
     [correct],
   );
 
-  const scored = accuracy(results.map((r) => r.quality));
-  const introduced = new Set(results.filter((r) => r.introduced).map((r) => r.card.id));
+  const scored = accuracy(firstAnswers.map((r) => r.quality));
+  const introduced = new Set(firstAnswers.filter((r) => r.introduced).map((r) => r.card.id));
 
   /**
    * One line per mora that came out wrong in a nameable way. Deduplicated:
@@ -81,6 +107,13 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
           hint="не ваш промах — в счёт выше не входит"
         />
         <Stat label="Новых символов" value={String(introduced.size)} />
+        {recovered.length > 0 && (
+          <Stat
+            label="Вышло со второй попытки"
+            value={String(recovered.length)}
+            hint="в счёт выше не входит"
+          />
+        )}
         {plan && <Stat label="Было к повторению" value={String(plan.due)} />}
       </div>
 
@@ -105,6 +138,13 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
           забыли, их не расслышали. Если одна и та же мора не разбирается
           раз за разом, дело обычно в произношении: японская /u/ (う, る, つ)
           произносится с растянутыми, а не округлёнными губами.
+        </p>
+      )}
+
+      {repeats > 0 && (
+        <p className="note-inline">
+          {firstAnswers.length} карточек и {results.length} ответов: сколько-то
+          вернулось внутри сессии. Плитки считают карточки, таблица — ответы.
         </p>
       )}
 
