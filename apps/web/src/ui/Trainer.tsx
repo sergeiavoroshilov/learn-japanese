@@ -5,7 +5,7 @@ import { curriculum, type LevelProgress } from '../lib/curriculum';
 import { classify, factsFrom } from '../lib/grade';
 import { grammarFor } from '../lib/match';
 import { correctionFor, type Correction } from '../lib/pronounce';
-import { planSession, type SessionPlan } from '../lib/plan';
+import { planSession } from '../lib/plan';
 import { DrillSession, type Engine, type SessionSnapshot } from '../lib/session';
 import { applyAnswer, isNew, type AnswerQuality, type CardProgress } from '../lib/srs';
 import { ProgressStore, type Settings } from '../lib/store';
@@ -69,7 +69,6 @@ export function Trainer() {
   const [screen, setScreen] = useState<'home' | 'drill' | 'summary' | 'stats'>('home');
   const [snapshot, setSnapshot] = useState<SessionSnapshot>(IDLE);
   const [results, setResults] = useState<CardResult[]>([]);
-  const [plan, setPlan] = useState<SessionPlan | null>(null);
   const [micLevel, setMicLevel] = useState(0);
   /** Why the last attempt to start failed — a blocked microphone, usually. */
   const [failure, setFailure] = useState<string | null>(null);
@@ -127,7 +126,6 @@ export function Trainer() {
     gradedRef.current = new Set();
     scheduledRef.current = built.scheduled;
     setResults([]);
-    setPlan(built);
     setFailure(null);
     setTeaching(
       new Set(
@@ -326,7 +324,6 @@ export function Trainer() {
       {screen === 'summary' && (
         <Summary
           results={results}
-          plan={plan}
           onAgain={start}
           onHome={() => {
             setSnapshot(IDLE);

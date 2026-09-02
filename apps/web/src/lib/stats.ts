@@ -98,27 +98,24 @@ export function summarize(outcomes: CardOutcome[]): SessionStats {
 }
 
 /**
- * How much of what the learner attempted came out right.
+ * How much came out right, out of everything asked.
  *
- * The denominator is the point. «Answers that reached the scheduler» is not
- * it — most of a session is practice, and dividing by two graded answers once
- * printed «18/2 — 900%». Nor is «every answer»: a sound the recogniser could
- * not place is its failure to own, and a skip was never an attempt.
+ * Nothing is held back from the denominator. An earlier version excluded the
+ * sounds the recogniser could not place, on the grounds that they are its
+ * failure rather than the learner's — which is true of *grading*, and stays
+ * true there, but on screen it produced «20 из 20» beside «не разобрал: 2»
+ * and a denominator nobody could see. Twenty asked, eighteen right.
  */
 export function accuracy(qualities: string[]): {
   correct: number;
-  attempts: number;
-  /** Answers left out of the count, so the tally can say so. */
-  excluded: number;
+  total: number;
   share: number | null;
 } {
-  const attempts = qualities.filter((q) => q !== 'unplaced' && q !== 'skipped');
-  const correct = attempts.filter((q) => q === 'correct').length;
+  const correct = qualities.filter((q) => q === 'correct').length;
   return {
     correct,
-    attempts: attempts.length,
-    excluded: qualities.length - attempts.length,
-    share: attempts.length === 0 ? null : correct / attempts.length,
+    total: qualities.length,
+    share: qualities.length === 0 ? null : correct / qualities.length,
   };
 }
 

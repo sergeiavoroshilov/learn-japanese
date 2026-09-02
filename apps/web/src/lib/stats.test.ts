@@ -126,44 +126,21 @@ describe('summarize', () => {
 });
 
 describe('accuracy', () => {
-  test('a share can never exceed one, whatever the mix', () => {
-    // «18/2 — 900%»: the denominator had been «answers that moved the
-    // schedule», which after a session of practice is a handful.
-    const qualities = [
-      ...Array<string>(18).fill('correct'),
-      'wrong',
-      'mispronounced',
-      ...Array<string>(8).fill('unplaced'),
-    ];
+  test('everything asked is in the denominator — twenty asked, eighteen right', () => {
+    const qualities = [...Array<string>(18).fill('correct'), 'wrong', 'unplaced'];
     const scored = accuracy(qualities);
     expect(scored.correct).toBe(18);
-    expect(scored.attempts).toBe(20);
+    expect(scored.total).toBe(20);
     expect(scored.share).toBe(0.9);
   });
 
-  test('a sound the recogniser could not place is not the learner’s miss', () => {
-    expect(accuracy(['correct', 'unplaced', 'unplaced']).attempts).toBe(1);
+  test('a share can never exceed one', () => {
+    // «18/2 — 900%»: the denominator had once been «answers that moved the
+    // schedule», which after a session of practice is a handful.
+    expect(accuracy([...Array<string>(18).fill('correct'), 'unplaced']).share).toBeLessThan(1.01);
   });
 
-  test('a skipped card was never an attempt', () => {
-    expect(accuracy(['correct', 'skipped']).share).toBe(1);
-  });
-
-  test('a session of nothing but engine failures has no share to report', () => {
-    expect(accuracy(['unplaced', 'skipped']).share).toBeNull();
-  });
-});
-
-describe('what the tally leaves out', () => {
-  test('is counted, so «20 из 20» can say why it is not 22', () => {
-    const scored = accuracy([...Array<string>(20).fill('correct'), 'unplaced', 'unplaced']);
-    expect(scored.correct).toBe(20);
-    expect(scored.attempts).toBe(20);
-    expect(scored.excluded).toBe(2);
-    expect(scored.share).toBe(1);
-  });
-
-  test('a clean session has nothing to explain', () => {
-    expect(accuracy(['correct', 'wrong']).excluded).toBe(0);
+  test('an empty session has no share to report', () => {
+    expect(accuracy([]).share).toBeNull();
   });
 });

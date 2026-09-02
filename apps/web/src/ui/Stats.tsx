@@ -23,9 +23,11 @@ export function Stats({ store, state, onBack }: Props) {
   const total = state.reduce((n, l) => n + l.total, 0);
 
   const scored = accuracy(reviews.map((r) => r.quality));
-  const correct = reviews.filter((r) => r.quality === 'correct');
   const medianOnset = percentile(
-    correct.map((r) => r.onsetMs).filter((v): v is number => v !== null),
+    reviews
+      .filter((r) => r.quality === 'correct')
+      .map((r) => r.onsetMs)
+      .filter((v): v is number => v !== null),
     50,
   );
 
@@ -94,10 +96,7 @@ export function Stats({ store, state, onBack }: Props) {
           <Stat
             label="Доля верных"
             value={scored.share === null ? '—' : percent(scored.share)}
-            hint={
-              `${scored.attempts} ответов` +
-              (scored.excluded > 0 ? ` · ещё ${scored.excluded} не в счёт` : '')
-            }
+            hint={`${scored.total} ответов`}
           />
         </div>
       </div>

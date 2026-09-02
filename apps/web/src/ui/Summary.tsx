@@ -1,12 +1,10 @@
 import { useMemo } from 'react';
-import type { SessionPlan } from '../lib/plan';
-import { accuracy, percentile } from '../lib/stats';
+import { percentile } from '../lib/stats';
 import { interval, ms, percent } from './format';
 import type { CardResult } from './Trainer';
 
 interface Props {
   results: CardResult[];
-  plan: SessionPlan | null;
   onAgain(): void;
   onHome(): void;
 }
@@ -20,16 +18,15 @@ const QUALITY_LABEL: Record<string, string> = {
   skipped: 'пропуск',
 };
 
-export function Summary({ results, plan, onAgain, onHome }: Props) {
+export function Summary({ results, onAgain, onHome }: Props) {
   /**
    * One line per card, from its first answer — the one that was graded.
    *
-   * A card that came back after a miss produces two results, so counting
-   * answers made a twenty-card session report twenty-two of them. The tiles
-   * are about how the cards went; the table below still lists every answer,
-   * including the repeats.
+   * A card that came back after a miss produces a second result, and counting
+   * those made a twenty-card session report twenty-two answers. The session
+   * was twenty cards, so that is what everything here counts.
    */
-  const firstAnswers = useMemo(() => {
+  const cards = useMemo(() => {
     const seen = new Set<string>();
     const out: CardResult[] = [];
     for (const result of results) {
@@ -39,19 +36,8 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
     }
     return out;
   }, [results]);
-  const repeats = results.length - firstAnswers.length;
 
-  const correct = firstAnswers.filter((r) => r.quality === 'correct');
-  const wrong = firstAnswers.filter((r) => r.quality === 'wrong' || r.quality === 'silent');
-  const unplaced = firstAnswers.filter((r) => r.quality === 'unplaced');
-  const slips = firstAnswers.filter((r) => r.quality === 'mispronounced');
-  /** Missed at first and right by the end of the session. */
-  const recovered = firstAnswers.filter(
-    (r) =>
-      r.quality !== 'correct' &&
-      results.some((o) => o.card.id === r.card.id && o.quality === 'correct'),
-  );
-
+  const correct = cards.filter((r) => r.quality === 'correct');
   const medianOnset = useMemo(
     () =>
       percentile(
@@ -60,92 +46,41 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
       ),
     [correct],
   );
-
-  const scored = accuracy(firstAnswers.map((r) => r.quality));
-  const introduced = new Set(firstAnswers.filter((r) => r.introduced).map((r) => r.card.id));
+  const introduced = cards.filter((r) => r.introduced).length;
 
   /**
-   * One line per mora that came out wrong in a nameable way. Deduplicated:
-   * the same slip on four cards is one thing to fix, not four.
+   * One line per mora that came out wrong in a nameable way — the part of a
+   * session actually worth acting on. Deduplicated: the same slip on four
+   * cards is one thing to fix, not four.
    */
-  const corrections = useMemo(() => {
-    const seen = new Set<string>();
-    return results.filter((r) => {
-      if (!r.correction || seen.has(r.card.id)) return false;
-      seen.add(r.card.id);
-      return true;
-    });
-  }, [results]);
+  const corrections = useMemo(() => cards.filter((r) => r.correction), [cards]);
 
   return (
-    <section className="panel results">
+    <section className="results">
       <h2>Сессия закончена</h2>
 
       <div className="stats">
         <Stat
           label="Верно"
-          value={`${scored.correct} из ${scored.attempts}`}
-          hint={
-            // «20 из 20» next to «не разобрал: 2» reads as a contradiction
-            // unless the tally says what it left out.
-            scored.share === null
-              ? undefined
-              : percent(scored.share) +
-                (scored.excluded > 0 ? ` · ещё ${scored.excluded} не в счёт` : '')
-          }
+          value={`${correct.length} из ${cards.length}`}
+          hint={cards.length > 0 ? percent(correct.length / cards.length) : undefined}
         />
-        <Stat label="Скорость ответа, медиана" value={ms(medianOnset)} />
-        <Stat label="Ошибок чтения" value={String(wrong.length)} />
-        <Stat
-          label="Произношение"
-          value={String(slips.length)}
-          hint="чтение верное, на график не влияет"
-        />
-        <Stat
-          label="Не разобрал распознаватель"
-          value={String(unplaced.length)}
-          hint="не ваш промах — в счёт выше не входит"
-        />
-        <Stat label="Новых символов" value={String(introduced.size)} />
-        {recovered.length > 0 && (
-          <Stat
-            label="Вышло со второй попытки"
-            value={String(recovered.length)}
-            hint="в счёт выше не входит"
-          />
-        )}
-        {plan && <Stat label="Было к повторению" value={String(plan.due)} />}
+        <Stat label="Скорость ответа" value={ms(medianOnset)} hint="медиана" />
+        {introduced > 0 && <Stat label="Новых символов" value={String(introduced)} />}
       </div>
 
       {corrections.length > 0 && (
         <div className="banner note">
           <strong>Что поправить в произношении</strong>
           <ul className="corrections">
-            {corrections.map((r, i) => (
-              <li key={i}>
+            {corrections.map((r) => (
+              <li key={r.card.id}>
                 {r.card.glyph} ({r.card.kiriji}) — услышано «{r.correction!.heard}»:{' '}
                 {r.correction!.hint}
               </li>
             ))}
           </ul>
         </div>
-      )}
-
-      {unplaced.length > 0 && (
-        <p className="note-inline">
-          {unplaced.length} ответ(ов) распознаватель не смог отнести ни к какой
-          море. Такие карточки не понижены в графике повторений — вы их не
-          забыли, их не расслышали. Если одна и та же мора не разбирается
-          раз за разом, дело обычно в произношении: японская /u/ (う, る, つ)
-          произносится с растянутыми, а не округлёнными губами.
-        </p>
-      )}
-
-      {repeats > 0 && (
-        <p className="note-inline">
-          {firstAnswers.length} карточек и {results.length} ответов: сколько-то
-          вернулось внутри сессии. Плитки считают карточки, таблица — ответы.
-        </p>
       )}
 
       <table>
@@ -159,14 +94,11 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
           </tr>
         </thead>
         <tbody>
-          {results.map((r, i) => (
-            <tr key={`${r.card.id}-${i}`} className={r.quality === 'correct' ? '' : 'miss'}>
+          {cards.map((r) => (
+            <tr key={r.card.id} className={r.quality === 'correct' ? '' : 'miss'}>
               <td className="cell-glyph">{r.card.glyph}</td>
               <td>{r.card.answer}</td>
-              <td>
-                {QUALITY_LABEL[r.quality] ?? r.quality}
-                {r.introduced ? ' · новая' : ''}
-              </td>
+              <td>{QUALITY_LABEL[r.quality] ?? r.quality}</td>
               <td>{ms(r.onsetMs)}</td>
               <td>{r.rating === null ? '—' : interval(r.intervalDays)}</td>
             </tr>
