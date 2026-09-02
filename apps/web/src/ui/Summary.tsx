@@ -59,7 +59,14 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
         <Stat
           label="Верно"
           value={`${scored.correct} из ${scored.attempts}`}
-          hint={scored.share === null ? undefined : percent(scored.share)}
+          hint={
+            // «20 из 20» next to «не разобрал: 2» reads as a contradiction
+            // unless the tally says what it left out.
+            scored.share === null
+              ? undefined
+              : percent(scored.share) +
+                (scored.excluded > 0 ? ` · ещё ${scored.excluded} не в счёт` : '')
+          }
         />
         <Stat label="Скорость ответа, медиана" value={ms(medianOnset)} />
         <Stat label="Ошибок чтения" value={String(wrong.length)} />
@@ -71,7 +78,7 @@ export function Summary({ results, plan, onAgain, onHome }: Props) {
         <Stat
           label="Не разобрал распознаватель"
           value={String(unplaced.length)}
-          hint="на планирование не влияет"
+          hint="не ваш промах — в счёт выше не входит"
         />
         <Stat label="Новых символов" value={String(introduced.size)} />
         {plan && <Stat label="Было к повторению" value={String(plan.due)} />}

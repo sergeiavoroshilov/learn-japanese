@@ -94,7 +94,10 @@ export function Stats({ store, state, onBack }: Props) {
           <Stat
             label="Доля верных"
             value={scored.share === null ? '—' : percent(scored.share)}
-            hint={`${scored.attempts} ответов`}
+            hint={
+              `${scored.attempts} ответов` +
+              (scored.excluded > 0 ? ` · ещё ${scored.excluded} не в счёт` : '')
+            }
           />
         </div>
       </div>

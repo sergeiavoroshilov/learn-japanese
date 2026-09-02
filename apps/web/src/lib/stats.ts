@@ -108,6 +108,8 @@ export function summarize(outcomes: CardOutcome[]): SessionStats {
 export function accuracy(qualities: string[]): {
   correct: number;
   attempts: number;
+  /** Answers left out of the count, so the tally can say so. */
+  excluded: number;
   share: number | null;
 } {
   const attempts = qualities.filter((q) => q !== 'unplaced' && q !== 'skipped');
@@ -115,6 +117,7 @@ export function accuracy(qualities: string[]): {
   return {
     correct,
     attempts: attempts.length,
+    excluded: qualities.length - attempts.length,
     share: attempts.length === 0 ? null : correct / attempts.length,
   };
 }

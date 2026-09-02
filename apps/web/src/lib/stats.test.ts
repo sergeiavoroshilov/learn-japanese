@@ -153,3 +153,17 @@ describe('accuracy', () => {
     expect(accuracy(['unplaced', 'skipped']).share).toBeNull();
   });
 });
+
+describe('what the tally leaves out', () => {
+  test('is counted, so «20 из 20» can say why it is not 22', () => {
+    const scored = accuracy([...Array<string>(20).fill('correct'), 'unplaced', 'unplaced']);
+    expect(scored.correct).toBe(20);
+    expect(scored.attempts).toBe(20);
+    expect(scored.excluded).toBe(2);
+    expect(scored.share).toBe(1);
+  });
+
+  test('a clean session has nothing to explain', () => {
+    expect(accuracy(['correct', 'wrong']).excluded).toBe(0);
+  });
+});
