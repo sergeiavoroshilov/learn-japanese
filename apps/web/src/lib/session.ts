@@ -3,6 +3,7 @@ import type { DrillCard } from './card';
 import { KeyboardSource } from './keyboard';
 import { expectedFor } from './match';
 import { OnsetDetector, type OnsetSource } from './onset';
+import { spokenFormOf, type Speaker } from './speech';
 import { VoskRecognizer, type GrammarMode } from './vosk';
 import {
   WebSpeechRecognizer,
@@ -69,6 +70,8 @@ export interface SessionSnapshot {
    * key with the answer in front of you.
    */
   awaitingContinue: boolean;
+  /** The reading is being said out loud; the recogniser is deaf meanwhile. */
+  speaking: boolean;
   liveHypotheses: Hypothesis[];
   /**
    * What the deck-wide control decoder has said about the card on screen.
@@ -101,6 +104,11 @@ export interface SessionOptions {
    * where a run has to stay comparable with the ones before it.
    */
   pauseOnMiss?: boolean;
+  /**
+   * Says the reading of a missed card out loud during that pause. A line of
+   * text cannot describe a vowel; hearing it can.
+   */
+  speaker?: Speaker;
   engine: Engine;
   /** Commit the decoder as soon as our VAD hears the answer end. */
   flushOnSilence?: boolean;
@@ -131,6 +139,12 @@ export interface SessionOptions {
   /** Called once per finished card, before the next one appears. */
   onOutcome?(outcome: CardOutcome): void;
 }
+
+/**
+ * How long the recogniser stays deaf after the voice stops — twice: once
+ * before committing the decoder, once for that commit to come back.
+ */
+const ECHO_TAIL_MS = 300;
 
 export class DrillSession {
   private recognizer: DrillRecognizer;
@@ -163,12 +177,22 @@ export class DrillSession {
    * that was answered correctly.
    */
   private settled = false;
+  /**
+   * The voice is saying the reading, or has only just stopped. Everything the
+   * recogniser reports meanwhile is the speaker, not the learner — and a
+   * correct reading heard between cards would otherwise be booked as a late
+   * answer, turning the miss being corrected into a hit.
+   */
+  private speaking = false;
+  /** Bumped on every utterance, so a stale one cannot re-arm a newer hold. */
+  private speakTurn = 0;
   private error: string | null = null;
 
   private shownAt = 0;
   private timeoutTimer: number | null = null;
   private advanceTimer: number | null = null;
   private flushTimer: number | null = null;
+  private speakTimer: number | null = null;
   private readonly interCardMs: number;
   private readonly reviewPauseMs: number;
   private readonly flushDelayMs: number;
@@ -180,12 +204,20 @@ export class DrillSession {
     this.flushDelayMs = opts.flushDelayMs ?? 250;
     const events: RecognizerEvents = {
       onHypothesis: (h) => {
+        if (this.speaking) return;
         this.liveHypotheses = [...this.liveHypotheses, h];
         this.emit();
       },
-      onMatch: (h) => (this.repeating ? this.resume(true) : this.finishCard('match', h)),
-      onLateMatch: (h) => this.recordLateMatch(h),
+      onMatch: (h) => {
+        if (this.speaking) return;
+        if (this.repeating) this.resume(true);
+        else this.finishCard('match', h);
+      },
+      onLateMatch: (h) => {
+        if (!this.speaking) this.recordLateMatch(h);
+      },
       onWitness: (transcript) => {
+        if (this.speaking) return;
         this.liveWitness = [...this.liveWitness, transcript];
         this.emit();
       },
@@ -249,6 +281,9 @@ export class DrillSession {
   }
 
   async start(): Promise<void> {
+    // Before the first await: this is the last moment the «start» tap counts
+    // as a user gesture, and iOS will not speak without one.
+    this.opts.speaker?.prime();
     this.status = 'starting';
     this.emit();
     try {
@@ -288,6 +323,7 @@ export class DrillSession {
     if (!this.awaitingContinue) return;
     this.awaitingContinue = false;
     this.repeating = false;
+    this.silence();
     this.recognizer.disarm();
     this.detector.disarm();
     this.recognizer.flush?.();
@@ -302,6 +338,7 @@ export class DrillSession {
   }
 
   stop(): void {
+    this.silence();
     this.clearTimers();
     this.recognizer.stop();
     this.detector.stop();
@@ -398,7 +435,8 @@ export class DrillSession {
     this.opts.onOutcome?.(this.outcomes[this.outcomes.length - 1]!);
 
     if (this.awaitingContinue) {
-      this.listenForRepeat(card);
+      if (this.opts.speaker) this.playReading();
+      else this.listenForRepeat(card);
       return;
     }
     this.advanceTimer = window.setTimeout(
@@ -419,6 +457,51 @@ export class DrillSession {
     this.detector.arm(() => {});
     this.recognizer.expect(expectedFor(card, this.opts.longForms !== false), performance.now());
     this.emit();
+  }
+
+  /**
+   * Say the reading of the card on hold, then listen for the learner to say
+   * it back. Runs by itself when a card is missed, and again on request.
+   */
+  playReading(): void {
+    const card = this.queue[this.cardIndex];
+    const speaker = this.opts.speaker;
+    if (!this.awaitingContinue || !card || !speaker) return;
+
+    this.silence();
+    const turn = this.speakTurn;
+    this.speaking = true;
+    this.repeating = false;
+    this.recognizer.disarm();
+    this.detector.disarm();
+    this.emit();
+
+    void speaker.say(spokenFormOf(card)).then(() => {
+      if (turn !== this.speakTurn) return;
+      // The decoder runs a chunk and a worker queue behind the microphone,
+      // and the room rings on after the voice stops. Commit what it has heard
+      // of the voice while still deaf, then give that result time to arrive
+      // and be dropped before listening again.
+      this.speakTimer = window.setTimeout(() => {
+        this.recognizer.flush?.();
+        this.speakTimer = window.setTimeout(() => {
+          if (turn !== this.speakTurn) return;
+          this.speaking = false;
+          this.speakTimer = null;
+          if (this.awaitingContinue) this.listenForRepeat(card);
+          else this.emit();
+        }, ECHO_TAIL_MS);
+      }, ECHO_TAIL_MS);
+    });
+  }
+
+  /** Cut the voice off and forget the utterance that was playing. */
+  private silence(): void {
+    this.speakTurn++;
+    if (this.speakTimer !== null) window.clearTimeout(this.speakTimer);
+    this.speakTimer = null;
+    if (this.speaking) this.opts.speaker?.cancel();
+    this.speaking = false;
   }
 
   /** Speech ended after its card had already closed on a match. */
@@ -469,6 +552,7 @@ export class DrillSession {
       current: this.queue[this.cardIndex] ?? null,
       lastStatus: this.lastStatus,
       awaitingContinue: this.awaitingContinue,
+      speaking: this.speaking,
       liveHypotheses: this.liveHypotheses,
       liveWitness: this.liveWitness,
       liveOnsetMs: this.liveOnsetMs,

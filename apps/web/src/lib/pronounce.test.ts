@@ -21,14 +21,14 @@ describe('correctionFor', () => {
   test('/u/ heard as /o/ is named as lip rounding — the run-8 finding', () => {
     const note = correctionFor(card('hira-う'), ['を']);
     expect(note?.heard).toBe('を');
-    expect(note?.hint).toContain('округления губ');
+    expect(note?.hint).toContain('не вытягивайте трубочкой');
   });
 
   test('the same rule covers the whole /u/ column, not just the bare vowel', () => {
     // る→ろ, つ→そ and ゆ→よ are one error, seen in three separate runs.
-    expect(correctionFor(card('hira-る'), ['ろ'])?.hint).toContain('округления губ');
-    expect(correctionFor(card('hira-つ'), ['そ'])?.hint).toContain('округления губ');
-    expect(correctionFor(card('hira-ゆ'), ['ヨ'])?.hint).toContain('округления губ');
+    expect(correctionFor(card('hira-る'), ['ろ'])?.hint).toContain('не вытягивайте трубочкой');
+    expect(correctionFor(card('hira-つ'), ['そ'])?.hint).toContain('не вытягивайте трубочкой');
+    expect(correctionFor(card('hira-ゆ'), ['ヨ'])?.hint).toContain('не вытягивайте трубочкой');
   });
 
   test('a vowel added to the syllabic nasal is named', () => {
@@ -54,6 +54,6 @@ describe('correctionFor', () => {
   });
 
   test('katakana cards get the same corrections as their hiragana twins', () => {
-    expect(correctionFor(card('kata-う'), ['オ'])?.hint).toContain('округления губ');
+    expect(correctionFor(card('kata-う'), ['オ'])?.hint).toContain('не вытягивайте трубочкой');
   });
 });

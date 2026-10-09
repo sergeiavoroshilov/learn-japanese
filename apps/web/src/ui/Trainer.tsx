@@ -8,6 +8,7 @@ import { correctionFor, type Correction } from '../lib/pronounce';
 import { planSession } from '../lib/plan';
 import { DrillSession, type Engine, type SessionSnapshot } from '../lib/session';
 import { applyAnswer, isNew, type AnswerQuality, type CardProgress } from '../lib/srs';
+import { BrowserSpeaker } from '../lib/speech';
 import { ProgressStore, type Settings } from '../lib/store';
 import { ScreenWakeLock, type WakeLockState } from '../lib/wakelock';
 import { Drill } from './Drill';
@@ -38,6 +39,7 @@ const IDLE: SessionSnapshot = {
   current: null,
   lastStatus: null,
   awaitingContinue: false,
+  speaking: false,
   liveHypotheses: [],
   liveWitness: [],
   liveOnsetMs: null,
@@ -158,6 +160,8 @@ export function Trainer() {
       flushOnSilence: true,
       // Stop on a miss and wait: the correction is the point of that moment.
       pauseOnMiss: true,
+      // …and say the reading out loud during it.
+      speaker: BrowserSpeaker.available() ? new BrowserSpeaker() : undefined,
       onUpdate: setSnapshot,
       onOutcome: (outcome) => {
         const at = new Date();
@@ -280,6 +284,7 @@ export function Trainer() {
         if (snapshot.awaitingContinue) sessionRef.current?.resume();
         else if (e.code === 'Space') sessionRef.current?.skip();
       }
+      if (e.code === 'KeyP' && snapshot.awaitingContinue) sessionRef.current?.playReading();
       if (e.code === 'Escape') stop();
     };
     window.addEventListener('keydown', onKey);
@@ -316,6 +321,7 @@ export function Trainer() {
           teaching={teaching}
           lastResult={lastResult}
           onContinue={() => sessionRef.current?.resume()}
+          onListen={() => sessionRef.current?.playReading()}
           onSkip={() => sessionRef.current?.skip()}
           onStop={stop}
         />

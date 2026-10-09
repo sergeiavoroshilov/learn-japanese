@@ -62,7 +62,7 @@ function hintFor(expected: DrillCard, heard: KanaCard): Omit<Correction, 'heard'
   // observed case is the vowel column, so that is what the rule keys on.
   if (expected.col === 'u' && heard.col === 'o') {
     return {
-      hint: 'японская /u/ — без округления губ. Губы трубочкой дают /o/: растяните их, как при «ы».',
+      hint: 'не русское «у»: губы не вытягивайте трубочкой, оставьте расслабленными, почти плоскими — выйдет звук между «у» и «ы». Трубочка даёт /o/.',
       systematic: true,
     };
   }

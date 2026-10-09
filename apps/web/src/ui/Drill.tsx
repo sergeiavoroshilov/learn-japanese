@@ -14,6 +14,8 @@ interface Props {
   teaching: Set<string>;
   lastResult: CardResult | null;
   onContinue(): void;
+  /** Say the reading of the card on hold again. */
+  onListen(): void;
   onSkip(): void;
   onStop(): void;
 }
@@ -34,6 +36,7 @@ export function Drill({
   teaching,
   lastResult,
   onContinue,
+  onListen,
   onSkip,
   onStop,
 }: Props) {
@@ -74,7 +77,9 @@ export function Drill({
       <div className="stage-top">
         <span className="counter">осталось {snapshot.remaining + 1}</span>
         <span className={snapshot.listening ? 'mic on' : 'mic'}>
-          {!snapshot.listening
+          {snapshot.speaking
+            ? 'звучит'
+            : !snapshot.listening
             ? 'пауза'
             : snapshot.awaitingContinue
               ? 'повторите вслух'
@@ -105,7 +110,7 @@ export function Drill({
       {missed && lastResult?.correction && (
         <span className="answer-why">{lastResult.correction.hint}</span>
       )}
-      {snapshot.awaitingContinue && (
+      {snapshot.awaitingContinue && !snapshot.speaking && (
         <span className="answer-why">
           скажите вслух — продолжится само
         </span>
@@ -130,9 +135,14 @@ export function Drill({
         {snapshot.awaitingContinue ? (
           // Shown on the desktop too, not only where there is no keyboard:
           // the hint alone leaves you wondering whether anything is expected.
-          <button className="primary" onClick={onContinue} autoFocus>
-            Продолжить<span className="key"> (Space)</span>
-          </button>
+          <>
+            <button className="primary" onClick={onContinue} autoFocus>
+              Продолжить<span className="key"> (Space)</span>
+            </button>
+            <button onClick={onListen} disabled={snapshot.speaking}>
+              ▶ Послушать<span className="key"> (P)</span>
+            </button>
+          </>
         ) : (
           <button onClick={onSkip}>
             Не помню<span className="key"> (Space)</span>
