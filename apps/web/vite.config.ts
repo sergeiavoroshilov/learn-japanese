@@ -9,5 +9,8 @@ const https = process.env.HTTPS === '1';
 
 export default defineConfig({
   plugins: [react(), ...(https ? [basicSsl()] : [])],
-  server: { port: 5173 },
+  // 5173 is taken by a trading terminal on this machine. strictPort makes Vite
+  // fail loudly instead of sliding to the next free port, which would leave the
+  // phone and the docs pointing at nothing.
+  server: { port: 5174, strictPort: true },
 });

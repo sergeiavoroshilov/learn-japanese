@@ -8,7 +8,7 @@
         "run",
         "dev"
       ],
-      "port": 5173
+      "port": 5174
     },
     {
       "name": "web-https",
@@ -17,8 +17,8 @@
         "run",
         "dev:https"
       ],
-      "port": 5173,
-      "url": "https://localhost:5173"
+      "port": 5174,
+      "url": "https://localhost:5174"
     }
   ]
 }
