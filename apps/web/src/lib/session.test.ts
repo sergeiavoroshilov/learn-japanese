@@ -59,7 +59,8 @@ async function missedSession() {
 describe('DrillSession with a speaker', () => {
   test('says the reading of a missed card by itself', async () => {
     const { state, snapshot } = await missedSession();
-    expect(state.said).toEqual(['う']);
+    // Held and twice: a plain «う» is about 200 ms and half-swallowed.
+    expect(state.said).toEqual(['うー、うー']);
     expect(snapshot().awaitingContinue).toBe(true);
     expect(snapshot().speaking).toBe(true);
   });
@@ -90,5 +91,15 @@ describe('DrillSession with a speaker', () => {
     session.resume();
     expect(state.cancelled).toBe(1);
     expect(snapshot().speaking).toBe(false);
+  });
+
+  test('dropping a card takes its queued repeat with it', async () => {
+    const { session, snapshot } = await missedSession();
+    session.requeue(u, 0);
+    expect(snapshot().remaining).toBe(1);
+    session.drop(u.id);
+    expect(snapshot().remaining).toBe(0);
+    session.resume();
+    expect(snapshot().status).toBe('done');
   });
 });

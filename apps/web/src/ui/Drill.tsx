@@ -16,6 +16,8 @@ interface Props {
   onContinue(): void;
   /** Say the reading of the card on hold again. */
   onListen(): void;
+  /** Take this card out of the drill for good. */
+  onDisable(id: string): void;
   onSkip(): void;
   onStop(): void;
 }
@@ -37,6 +39,7 @@ export function Drill({
   lastResult,
   onContinue,
   onListen,
+  onDisable,
   onSkip,
   onStop,
 }: Props) {
@@ -114,6 +117,13 @@ export function Drill({
         <span className="answer-why">
           скажите вслух — продолжится само
         </span>
+      )}
+      {snapshot.awaitingContinue && card && (
+        // Quiet on purpose: a way out, not a suggestion. Undone from the
+        // settings on the home screen.
+        <button className="link" onClick={() => onDisable(card.id)}>
+          Убрать «{card.glyph}» из тренировки
+        </button>
       )}
 
       <div className="live">

@@ -109,18 +109,33 @@ export function Trainer() {
     [store],
   );
 
+  const disabled = useMemo(() => new Set(settings.disabled), [settings.disabled]);
+
   const state: LevelProgress[] = useMemo(
-    () => curriculum(progressFor, new Date()),
-    [progressFor],
+    () => curriculum(progressFor, new Date(), disabled),
+    [progressFor, disabled],
+  );
+
+  /** Switch a card off for good, from the pause after missing it. */
+  const disableCard = useCallback(
+    (id: string) => {
+      if (!settings.disabled.includes(id)) {
+        updateSettings({ ...settings, disabled: [...settings.disabled, id] });
+      }
+      sessionRef.current?.drop(id);
+      sessionRef.current?.resume();
+    },
+    [settings, updateSettings],
   );
 
   const start = useCallback(() => {
     const now = new Date();
     const look = (id: string) => store.progressFor(id, now);
-    const built = planSession(curriculum(look, now), look, now, {
+    const built = planSession(curriculum(look, now, disabled), look, now, {
       size: settings.sessionSize,
       newLimit: settings.newPerSession,
       excludeOov: engine === 'vosk',
+      disabled,
     });
     if (built.cards.length === 0) return;
 
@@ -322,6 +337,7 @@ export function Trainer() {
           lastResult={lastResult}
           onContinue={() => sessionRef.current?.resume()}
           onListen={() => sessionRef.current?.playReading()}
+          onDisable={disableCard}
           onSkip={() => sessionRef.current?.skip()}
           onStop={stop}
         />

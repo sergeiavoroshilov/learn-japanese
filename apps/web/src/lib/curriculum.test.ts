@@ -163,4 +163,19 @@ describe('what is holding a level', () => {
     learnLevel(states, 0);
     expect(curriculum(lookup(states), NOW)[0]!.blocked).toEqual({ sessions: 0, slow: 0 });
   });
+
+  test('a switched-off glyph neither counts nor holds the level shut', () => {
+    const states: Record<string, CardProgress> = {};
+    learnLevel(states, 0);
+    // Six never learned: 40 of 46 is short of the 90 % gate.
+    const off = LEVELS[0]!.cards.filter((c) => !c.voiceOov).slice(0, 6);
+    for (const card of off) delete states[card.id];
+    expect(curriculum(lookup(states), NOW)[0]!.complete).toBe(false);
+
+    // Switched off, they leave the denominator, and the next level opens.
+    const state = curriculum(lookup(states), NOW, new Set(off.map((c) => c.id)));
+    expect(state[0]!.total).toBe(LEVELS[0]!.cards.filter((c) => !c.voiceOov).length - off.length);
+    expect(state[0]!.complete).toBe(true);
+    expect(state[1]!.unlocked).toBe(true);
+  });
 });

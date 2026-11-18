@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { UNLOCK_SHARE, currentLevel, type LevelProgress } from '../lib/curriculum';
+import { drillCardById } from '../lib/levels';
 import { serialize, type ProgressStore, type Settings } from '../lib/store';
 import { percent } from './format';
 
@@ -191,6 +192,29 @@ export function Home({
                 <span>Показывать чтение</span>
               </label>
             </div>
+
+            {settings.disabled.length > 0 && (
+              <div className="disabled-cards">
+                <span className="label">Убраны из тренировки — нажмите, чтобы вернуть</span>
+                <div className="chips">
+                  {settings.disabled.map((id) => (
+                    <button
+                      key={id}
+                      className="chip"
+                      title="Вернуть в тренировку"
+                      onClick={() =>
+                        onSettings({
+                          ...settings,
+                          disabled: settings.disabled.filter((d) => d !== id),
+                        })
+                      }
+                    >
+                      {drillCardById(id)?.glyph ?? id} ↺
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="actions">
               <button onClick={backup}>Копия прогресса в буфер</button>

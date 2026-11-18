@@ -208,4 +208,23 @@ describe('practice goes where the work is', () => {
     const picked = new Set(built.cards.map((c) => c.id));
     for (const c of stuck) expect(picked.has(c.id)).toBe(true);
   });
+
+  test('a switched-off card is never planned — not as new, due or practice', () => {
+    const u = HIRA.find((c) => c.glyph === 'う')!;
+    const i = HIRA.find((c) => c.glyph === 'い')!;
+    const off = new Set([u.id, i.id]);
+    const states = { [i.id]: overdue(i.id, 3) };
+    const look = lookup(states);
+    const built = planSession(curriculum(look, NOW, off), look, NOW, {
+      size: 20,
+      newLimit: 5,
+      excludeOov: false,
+      disabled: off,
+    });
+    const ids = built.cards.map((c) => c.id);
+    expect(ids).not.toContain(u.id);
+    expect(ids).not.toContain(i.id);
+    // Its slot goes to the next glyph in the table instead.
+    expect(built.fresh).toBe(5);
+  });
 });

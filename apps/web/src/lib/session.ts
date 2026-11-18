@@ -363,6 +363,18 @@ export class DrillSession {
     this.emit();
   }
 
+  /**
+   * Take a card out of what is left of this session. The learner has switched
+   * it off — and the repeat already queued for the miss they just made must
+   * not bring it straight back.
+   */
+  drop(id: string): void {
+    const head = this.queue.slice(0, this.cardIndex + 1);
+    const rest = this.queue.slice(this.cardIndex + 1).filter((c) => c.id !== id);
+    this.queue = [...head, ...rest];
+    this.emit();
+  }
+
   private nextCard(): void {
     this.cardIndex++;
     const card = this.queue[this.cardIndex];

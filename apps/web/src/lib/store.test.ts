@@ -50,6 +50,15 @@ describe('serialisation', () => {
     );
     expect((restored.settings as unknown as Record<string, unknown>).decks).toBeUndefined();
   });
+
+  test('switched-off cards survive the round trip, and only as a list of ids', () => {
+    const kept = deserialize('{"cards":{},"reviews":[],"settings":{"disabled":["hira-う"]}}');
+    expect(kept.settings.disabled).toEqual(['hira-う']);
+    // typeof calls an object «object» too; it must not pass for a list.
+    const junk = deserialize('{"cards":{},"reviews":[],"settings":{"disabled":{"0":"hira-う"}}}');
+    expect(junk.settings.disabled).toEqual([]);
+    expect(deserialize('{"cards":{},"reviews":[]}').settings.disabled).toEqual([]);
+  });
 });
 
 describe('ProgressStore', () => {

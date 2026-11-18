@@ -50,14 +50,21 @@ export interface LevelProgress {
  * levels never stop — only the introduction of *new* glyphs is gated, which
  * is the difference between pacing someone and blocking them.
  */
-export function curriculum(progressFor: ProgressLookup, now: Date): LevelProgress[] {
+export function curriculum(
+  progressFor: ProgressLookup,
+  now: Date,
+  /** Cards the learner took out of the drill. */
+  disabled: ReadonlySet<string> = new Set(),
+): LevelProgress[] {
   const out: LevelProgress[] = [];
   let previousComplete = true;
 
   for (const level of LEVELS) {
     // A glyph the recogniser has no word for cannot be learned by voice, so
-    // it must not sit in the denominator holding a level shut forever.
-    const cards = level.cards.filter((c) => !c.voiceOov);
+    // it must not sit in the denominator holding a level shut forever. Nor
+    // can one the learner switched off: «убрать насовсем» that still blocked
+    // katakana would only move the wall.
+    const cards = level.cards.filter((c) => !c.voiceOov && !disabled.has(c.id));
     let fresh = 0;
     let learning = 0;
     let learned = 0;

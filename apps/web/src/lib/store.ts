@@ -9,6 +9,13 @@ export interface Settings {
   timeoutMs: number;
   /** Show the romaji under the glyph — a crutch for the first days. */
   showRomaji: boolean;
+  /**
+   * Cards the learner has taken out of the drill, by id. Not forgotten and not
+   * failed — just never asked: a glyph you cannot yet say is not one you can
+   * practise by saying it, and having it come back every session teaches
+   * nothing but dread.
+   */
+  disabled: string[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -16,6 +23,7 @@ export const DEFAULT_SETTINGS: Settings = {
   newPerSession: 5,
   timeoutMs: 6000,
   showRomaji: false,
+  disabled: [],
 };
 
 export interface ReviewEntry {
@@ -81,7 +89,12 @@ function pickSettings(stored: Partial<Settings> | undefined): Settings {
   const out = { ...DEFAULT_SETTINGS };
   for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]) {
     const value = stored?.[key];
-    if (typeof value === typeof DEFAULT_SETTINGS[key]) {
+    if (Array.isArray(DEFAULT_SETTINGS[key])) {
+      // typeof says «object» for anything; only a list of ids will do.
+      if (Array.isArray(value) && value.every((v) => typeof v === 'string')) {
+        (out as Record<string, unknown>)[key] = value;
+      }
+    } else if (typeof value === typeof DEFAULT_SETTINGS[key]) {
       (out as Record<string, unknown>)[key] = value;
     }
   }

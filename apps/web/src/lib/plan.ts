@@ -28,6 +28,8 @@ export interface PlanOptions {
   newLimit: number;
   /** Drop cards the decoder cannot output (voice sessions only). */
   excludeOov: boolean;
+  /** Cards the learner took out of the drill. Never shown, in any mode. */
+  disabled?: ReadonlySet<string>;
 }
 
 /**
@@ -43,7 +45,8 @@ export function planSession(
   now: Date,
   opts: PlanOptions,
 ): SessionPlan {
-  const reached = reachedCards(state);
+  const disabled = opts.disabled ?? new Set<string>();
+  const reached = reachedCards(state).filter((c) => !disabled.has(c.id));
   const excluded = opts.excludeOov ? reached.filter((c) => c.voiceOov) : [];
   const usable = opts.excludeOov ? reached.filter((c) => !c.voiceOov) : reached;
 
@@ -60,6 +63,7 @@ export function planSession(
   // kanji by how often they appear in print — never at random.
   const fresh = (level?.level.cards ?? [])
     .filter((c) => !opts.excludeOov || !c.voiceOov)
+    .filter((c) => !disabled.has(c.id))
     .filter((c) => isNew(progressFor(c.id)))
     .slice(0, Math.max(0, Math.min(opts.newLimit, opts.size - due.length)));
 

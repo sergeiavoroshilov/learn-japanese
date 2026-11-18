@@ -100,7 +100,16 @@ function japaneseVoice(): SpeechSynthesisVoice | null {
 /**
  * What to say for a card: the kana a kanji is read as, never the kanji
  * itself, which a voice would read whichever way it likes best.
+ *
+ * A lone kana is said held and twice — «うー、うー». Said plainly a voice gives
+ * it about 200 ms, half-swallowed, and over before you have started listening.
+ * Held is also how the learner says a mora on its own, and what the decoder
+ * expects (`lexicon.ts` carries the long spellings for exactly that reason).
  */
 export function spokenFormOf(card: DrillCard): string {
+  if (card.kind === 'kana') {
+    const held = card.glyph === 'ん' || card.glyph === 'ン' ? card.glyph : `${card.glyph}ー`;
+    return `${held}、${held}`;
+  }
   return card.reading || card.glyph;
 }

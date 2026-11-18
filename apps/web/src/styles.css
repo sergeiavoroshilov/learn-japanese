@@ -272,3 +272,7 @@ tr.miss td { color: var(--warn); }
 .help-meaning { font-size: 15px; max-width: 44ch; }
 .help-extra { color: var(--muted); font-size: 14px; }
 .help.missed .help-reading, .help.missed .help-latin { color: var(--warn); }
+
+.disabled-cards { display: flex; flex-direction: column; gap: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+button.chip { font-size: 18px; padding: 4px 10px; }

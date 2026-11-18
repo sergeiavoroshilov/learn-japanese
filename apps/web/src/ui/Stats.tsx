@@ -56,6 +56,9 @@ export function Stats({ store, state, onBack }: Props) {
   const slowest = useMemo(() => {
     const rows = Object.values(store.progress.cards)
       .filter((p) => p.avgOnsetMs !== null)
+      // A glyph switched off is not being worked on; listing it as the
+      // slowest would point at the one thing the learner chose to set aside.
+      .filter((p) => !store.settings.disabled.includes(p.id))
       .sort((a, b) => (b.avgOnsetMs ?? 0) - (a.avgOnsetMs ?? 0))
       .slice(0, 10);
     return rows.flatMap((p) => {
