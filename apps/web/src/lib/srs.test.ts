@@ -5,6 +5,7 @@ import {
   LATENCY_GOOD_MS,
   Rating,
   applyAnswer,
+  isBeingTaught,
   isDue,
   isLearned,
   isNew,
@@ -213,5 +214,45 @@ describe('practice answers', () => {
     }
     expect(p.fsrs.stability).toBe(afterFirst);
     expect(p.fsrs.reps).toBe(1);
+  });
+});
+
+describe('isBeingTaught', () => {
+  const later = new Date(NOW.getTime() + 3_600_000);
+
+  test('the reading goes after two sessions answered as practice', () => {
+    // The case that broke it: right every day, but never due, so nothing
+    // reached the scheduler and the reading stayed up for days.
+    let p = applyAnswer(newProgress('hira-う', NOW), { quality: 'correct', onsetMs: 900, firstThisSession: true }, NOW).progress;
+    expect(isBeingTaught(p)).toBe(true);
+    p = applyAnswer(p, { quality: 'correct', onsetMs: 900, firstThisSession: true, practice: true }, later).progress;
+    expect(p.fsrs.reps).toBe(1);
+    expect(isBeingTaught(p)).toBe(false);
+  });
+
+  test('repeats inside one session are one meeting', () => {
+    let p = newProgress('hira-う', NOW);
+    p = applyAnswer(p, { quality: 'correct', onsetMs: 900, firstThisSession: true }, NOW).progress;
+    for (let i = 0; i < 4; i++) {
+      p = applyAnswer(p, { quality: 'correct', onsetMs: 900, practice: true }, NOW).progress;
+    }
+    expect(p.sessionsSeen).toBe(1);
+    expect(isBeingTaught(p)).toBe(true);
+  });
+
+  test('a session counts whatever came of it', () => {
+    let p = newProgress('hira-う', NOW);
+    p = applyAnswer(p, { quality: 'skipped', onsetMs: null, firstThisSession: true }, NOW).progress;
+    p = applyAnswer(p, { quality: 'wrong', onsetMs: null, firstThisSession: true }, later).progress;
+    expect(isBeingTaught(p)).toBe(false);
+  });
+
+  test('progress saved before the counter falls back to the review count', () => {
+    const p = applyAnswer(newProgress('hira-う', NOW), { quality: 'correct', onsetMs: 900 }, NOW).progress;
+    const old = { ...p, sessionsSeen: undefined } as unknown as typeof p;
+    expect(isBeingTaught(old)).toBe(true);
+    const twice = applyAnswer(old, { quality: 'correct', onsetMs: 900, firstThisSession: true }, later).progress;
+    expect(twice.sessionsSeen).toBe(2);
+    expect(isBeingTaught(twice)).toBe(false);
   });
 });

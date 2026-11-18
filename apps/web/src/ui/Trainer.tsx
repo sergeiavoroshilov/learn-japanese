@@ -7,7 +7,7 @@ import { grammarFor } from '../lib/match';
 import { correctionFor, type Correction } from '../lib/pronounce';
 import { planSession } from '../lib/plan';
 import { DrillSession, type Engine, type SessionSnapshot } from '../lib/session';
-import { applyAnswer, isNew, type AnswerQuality, type CardProgress } from '../lib/srs';
+import { applyAnswer, isBeingTaught, isNew, type AnswerQuality, type CardProgress } from '../lib/srs';
 import { BrowserSpeaker } from '../lib/speech';
 import { ProgressStore, type Settings } from '../lib/store';
 import { ScreenWakeLock, type WakeLockState } from '../lib/wakelock';
@@ -52,12 +52,6 @@ const IDLE: SessionSnapshot = {
 /** How many times one card may come back inside a single session. */
 const MAX_REQUEUES = 2;
 
-/**
- * A card is shown with its reading for the first couple of answers, then on
- * its own. Asking someone to recall what they have never been told is not a
- * test of memory, it is a guessing game.
- */
-const TEACH_REPS = 2;
 
 export function Trainer() {
   const storeRef = useRef<ProgressStore | null>(null);
@@ -150,7 +144,7 @@ export function Trainer() {
     // this call, marking every answer as unassisted.
     const beingTaught = new Set(
       built.cards
-        .filter((c) => store.progressFor(c.id, now).fsrs.reps < TEACH_REPS)
+        .filter((c) => isBeingTaught(store.progressFor(c.id, now)))
         .map((c) => c.id),
     );
     teachingRef.current = beingTaught;

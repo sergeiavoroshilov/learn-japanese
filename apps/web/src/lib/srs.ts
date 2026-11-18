@@ -103,6 +103,14 @@ export interface CardProgress {
    * observable now, and this is what the syllabus gate uses.
    */
   correctSessions: number;
+  /**
+   * Sessions this card has been shown in, whatever came of it. Decides how
+   * long its reading stays on screen: that is about having been *told*, not
+   * about having been right — and not about what the scheduler asked for,
+   * which once kept the reading up for days on a glyph answered correctly
+   * every day as practice.
+   */
+  sessionsSeen: number;
 }
 
 export function newProgress(id: string, now: Date): CardProgress {
@@ -116,6 +124,7 @@ export function newProgress(id: string, now: Date): CardProgress {
     unplaced: 0,
     mispronounced: 0,
     correctSessions: 0,
+    sessionsSeen: 0,
   };
 }
 
@@ -162,6 +171,7 @@ export function applyAnswer(
     unplaced: progress.unplaced + (answer.quality === 'unplaced' ? 1 : 0),
     mispronounced: progress.mispronounced + (answer.quality === 'mispronounced' ? 1 : 0),
     correctSessions: nextSessions(progress, answer.quality, answer.firstThisSession === true),
+    sessionsSeen: seenOf(progress) + (answer.firstThisSession === true ? 1 : 0),
   };
 
   if (answer.quality === 'correct' && answer.onsetMs !== null) {
@@ -198,6 +208,23 @@ export function isNew(progress: CardProgress): boolean {
 export function retrievability(progress: CardProgress, now: Date): number {
   if (progress.fsrs.state === State.New) return 0;
   return scheduler.get_retrievability(progress.fsrs, now, false);
+}
+
+/** Sessions in which a card is shown with its reading. */
+export const TEACH_SESSIONS = 2;
+
+/**
+ * The card is still being taught: its reading goes on screen with it. Asking
+ * someone to recall what they have never been told is not a test of memory,
+ * it is a guessing game.
+ */
+export function isBeingTaught(progress: CardProgress): boolean {
+  return seenOf(progress) < TEACH_SESSIONS;
+}
+
+/** Progress from before the counter: FSRS reviews were once per session too. */
+function seenOf(progress: CardProgress): number {
+  return progress.sessionsSeen ?? progress.fsrs.reps;
 }
 
 /**
