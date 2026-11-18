@@ -39,6 +39,9 @@ body {
   flex-direction: column;
   gap: 28px;
 }
+/* The drill: room for a five-kana word at full size (5 × 190px). Text pages
+   stay at reading width. */
+.page.wide { max-width: 1040px; }
 
 h1 { font-size: 21px; margin: 0; letter-spacing: -0.01em; }
 h2 { font-size: 15px; margin: 0 0 12px; font-weight: 600; }
@@ -137,6 +140,8 @@ input[type='number'], select {
   border-radius: var(--radius);
   transition: background 140ms;
   padding: 20px;
+  /* The glyph sizes itself against this box — see .glyph. */
+  container-type: inline-size;
 }
 .stage.match { background: var(--ok-soft); }
 .stage.timeout, .stage.skipped { background: var(--warn-soft); }
@@ -147,7 +152,14 @@ input[type='number'], select {
 .meter { flex: 1; height: 4px; background: var(--line); border-radius: 999px; overflow: hidden; }
 .meter-fill { height: 100%; background: var(--accent); transition: width 60ms linear; }
 
-.glyph { font-size: clamp(110px, 30vw, 190px); line-height: 1.05; }
+/* A word is one line, always: wrapped, ともだち reads as two words. Where it
+   would not fit, the size comes down with the length (--len, set by the card)
+   instead — a kana is one em wide, so 94cqi / len is the most that fits. */
+.glyph {
+  font-size: min(clamp(110px, 30vw, 190px), calc(94cqi / var(--len, 1)));
+  line-height: 1.05;
+  white-space: nowrap;
+}
 .romaji { color: var(--muted); font-size: 19px; letter-spacing: 0.06em; }
 .answer { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
 .answer-romaji { font-size: 24px; color: var(--warn); }
@@ -249,14 +261,16 @@ tr.miss td { color: var(--warn); }
 @media (max-width: 560px) {
   .page { padding: 16px 14px 48px; gap: 22px; }
   body { font-size: 15px; }
-  .glyph { font-size: clamp(120px, 40vw, 190px); }
+  .glyph { font-size: min(clamp(120px, 40vw, 190px), calc(94cqi / var(--len, 1))); }
   .stats { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
   input[type='number'], select { min-width: 84px; }
-  .stage-actions { width: 100%; }
-  .stage-actions button { flex: 1; }
+  /* Three buttons in the pause after a miss do not fit across a phone:
+     «Продолжить» takes its own row, the other two share the next. */
+  .stage-actions { width: 100%; flex-wrap: wrap; }
+  .stage-actions button { flex: 1; white-space: nowrap; }
   button.primary { width: 100%; text-align: center; }
-  /* …except inside the stage, where it shares the row with «Закончить». */
-  .stage-actions button.primary { width: auto; flex: 2; }
+  /* Inside the stage it is the whole first row of the wrapped actions. */
+  .stage-actions button.primary { width: auto; flex: 1 1 100%; }
   .chip, button { min-height: 40px; }
   .cell { min-width: 44px; min-height: 44px; }
   .results table { display: block; overflow-x: auto; white-space: nowrap; }

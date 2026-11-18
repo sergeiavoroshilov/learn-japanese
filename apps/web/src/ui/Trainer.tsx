@@ -303,7 +303,7 @@ export function Trainer() {
   const lastResult = results.length > 0 ? results[results.length - 1]! : null;
 
   return (
-    <main className="page">
+    <main className={screen === 'drill' ? 'page wide' : 'page'}>
       {screen === 'home' && (
         <Home
           settings={settings}

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { DrillCard } from '../lib/card';
 import { correctionFor } from '../lib/pronounce';
 import type { SessionSnapshot } from '../lib/session';
@@ -102,7 +103,9 @@ export function Drill({
 
       {snapshot.error && <div className="banner error">Ошибка: {snapshot.error}</div>}
 
-      <div className="glyph">{card?.glyph ?? '…'}</div>
+      <div className="glyph" style={{ '--len': [...(card?.glyph ?? '…')].length } as CSSProperties}>
+        {card?.glyph ?? '…'}
+      </div>
 
       {showAnswer && card && <CardHelp card={card} missed={Boolean(missed)} />}
       {missed && (
